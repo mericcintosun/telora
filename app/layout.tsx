@@ -7,7 +7,7 @@ const display = Red_Hat_Display({ subsets: ["latin"], display: "swap", variable:
 const text = Red_Hat_Text({ subsets: ["latin"], display: "swap", variable: "--font-rh-text" });
 
 export const metadata: Metadata = {
-  title: "Telora: see your poster from across the hallway",
+  title: { default: "Telora", template: "%s | Telora" },
   description:
     "Upload a poster, pick the print size and how far away people stand. Telora shows which text goes unreadable and at exactly how many metres, before you print.",
   metadataBase: new URL("https://telora.vercel.app"),

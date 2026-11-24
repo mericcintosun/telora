@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
+import { HeaderLink } from "@/components/header-link";
 import { ShareViewButton } from "@/components/share-view-button";
 
 /* HEADER row of IDENTITY.md: solid ground, border-b in LINE, sticky.
@@ -13,12 +14,7 @@ export function SiteHeader() {
           Telora
         </Link>
         <nav className="flex items-center gap-2 sm:gap-4">
-          <Link
-            href="/about"
-            className="rounded-xl px-2 py-1 text-sm font-semibold underline decoration-peach decoration-2 underline-offset-4 hover:decoration-magenta"
-          >
-            How it works
-          </Link>
+          <HeaderLink href="/about">How it works</HeaderLink>
           <ShareViewButton />
         </nav>
       </div>

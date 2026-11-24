@@ -1,15 +1,16 @@
 import { ImageResponse } from "next/og";
+import { OG_ACCENT, OG_GROUND, OG_INK, OG_LINE, OG_SECOND } from "@/lib/og-colors";
 
 export const alt = "Telora: see your poster from across the hallway, before you print it";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Image generation cannot read CSS variables, so the IDENTITY.md palette is repeated here.
-const GROUND = "#fff4ec";
-const INK = "#24122e";
-const ACCENT = "#c81f73";
-const SECOND = "#ff9a62";
-const LINE = "#f0c9b8";
+// Image generation cannot read CSS variables; the palette comes from lib/og-colors.ts.
+const GROUND = OG_GROUND;
+const INK = OG_INK;
+const ACCENT = OG_ACCENT;
+const SECOND = OG_SECOND;
+const LINE = OG_LINE;
 
 export default function OpengraphImage() {
   return new ImageResponse(

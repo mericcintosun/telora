@@ -140,7 +140,7 @@ export function SimulatedPoster({
                 <span
                   key={score.verdict}
                   className={cn(
-                    "telora-enter absolute -top-6 left-0 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold leading-tight whitespace-nowrap text-on-accent",
+                    "telora-enter absolute -top-6 left-0 rounded-full px-2 py-0.5 font-sans text-2xs font-semibold leading-tight whitespace-nowrap text-on-accent",
                     CHIP[score.verdict]
                   )}
                 >
