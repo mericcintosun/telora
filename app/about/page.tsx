@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdapter } from "@/lib/adapter";
-import { OCR_PASS_RATIO } from "@/lib/config";
+import { OCR_ASSET_HOST, OCR_PASS_RATIO } from "@/lib/config";
 import { BASE_THRESHOLD_ARCMIN, SCAN_DISTANCES_M, capHeightPt, formatMeters, maxReadableDistanceM } from "@/lib/legibility";
 
 export const metadata: Metadata = {
@@ -108,7 +108,7 @@ export default async function AboutPage() {
 
       <section className="flex flex-col gap-4">
         <h2 className="text-2xl font-black">What runs where</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Tesseract.js OCR</CardTitle>
@@ -131,7 +131,10 @@ export default async function AboutPage() {
           </Card>
         </div>
         <p className="text-sm text-muted-foreground">
-          No account, no API key, no server. Your poster never leaves the tab.
+          No account, no API key, no server. Your poster never leaves the tab. Once the lab is idle, the browser
+          downloads the OCR engine and its English language data (about 4 MB) from {OCR_ASSET_HOST}, the default
+          source of Tesseract.js;
+          the pdf.js worker comes from this site. The PNG report is drawn in the tab too.
         </p>
       </section>
 

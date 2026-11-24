@@ -13,7 +13,7 @@ export function HeaderLink({ href, children }: { href: string; children: React.R
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "rounded-xl px-2 py-1 text-sm font-semibold underline decoration-2 underline-offset-4 hover:decoration-magenta",
+        "inline-flex min-h-11 shrink-0 items-center rounded-xl px-2 text-sm font-semibold whitespace-nowrap underline decoration-2 underline-offset-4 hover:decoration-magenta",
         active ? "decoration-magenta" : "decoration-peach"
       )}
     >

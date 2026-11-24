@@ -8,13 +8,19 @@ import { ShareViewButton } from "@/components/share-view-button";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2.5 rounded-xl font-display text-xl font-black tracking-tight">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
+        <Link
+          href="/"
+          className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl font-display text-xl font-black tracking-tight sm:gap-2.5"
+        >
           <BrandMark size={30} />
           Telora
         </Link>
-        <nav className="flex items-center gap-2 sm:gap-4">
-          <HeaderLink href="/about">How it works</HeaderLink>
+        <nav className="flex min-w-0 items-center gap-1 sm:gap-4">
+          <HeaderLink href="/about">
+            <span className="sm:hidden">About</span>
+            <span className="hidden sm:inline">How it works</span>
+          </HeaderLink>
           <ShareViewButton />
         </nav>
       </div>

@@ -18,10 +18,11 @@ const buttonVariants = cva(
           "border border-border bg-card text-foreground hover:bg-surface aria-pressed:border-magenta aria-pressed:bg-magenta aria-pressed:text-on-accent aria-pressed:shadow-panel",
       },
       size: {
-        default: "h-10 px-4",
-        sm: "h-8 rounded-xl px-3 text-xs",
+        /* Every size keeps a 44 px (min-h-11 / h-11) touch target. */
+        default: "h-11 px-4",
+        sm: "min-h-11 rounded-xl px-3 text-xs",
         lg: "h-12 rounded-2xl px-7 text-base",
-        icon: "h-10 w-10",
+        icon: "h-11 w-11",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

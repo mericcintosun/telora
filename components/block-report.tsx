@@ -64,7 +64,12 @@ export function BlockReport({
   onOpenPoster?: (id: string) => void;
 }) {
   if (poster.blocks.length === 0) {
-    return <p className="py-2 text-sm text-muted-foreground">No text lines found for this poster.</p>;
+    return (
+      <p className="py-2 text-sm text-muted-foreground">
+        No text lines found on this poster yet. Drop a flat PNG or PDF export in the upload card and every line it finds
+        gets its own distance and fix here.
+      </p>
+    );
   }
 
   const rows = [...poster.blocks]
@@ -91,7 +96,12 @@ export function BlockReport({
     {variantLink && onOpenPoster && (
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface p-3">
         <p className="text-sm">{variantLink.note}</p>
-        <Button size="sm" variant={poster.correctedId ? "default" : "outline"} onClick={() => onOpenPoster(variantLink.id)}>
+        <Button
+          size="sm"
+          className="min-h-11"
+          variant={poster.correctedId ? "default" : "outline"}
+          onClick={() => onOpenPoster(variantLink.id)}
+        >
           {variantLink.label}
         </Button>
       </div>

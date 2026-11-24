@@ -19,9 +19,15 @@ export function ShareViewButton() {
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={copy} aria-live="polite">
+    <Button variant="outline" size="sm" className="min-h-11 min-w-0" onClick={copy} aria-live="polite">
       <Link2 />
-      {status === "copied" ? "Link copied" : status === "failed" ? "Copy blocked, use the address bar" : "Share this view"}
+      {/* Short labels below sm so the header fits at 360 px next to the mark and the one link. */}
+      <span className="truncate sm:hidden">
+        {status === "copied" ? "Copied" : status === "failed" ? "Use address bar" : "Share"}
+      </span>
+      <span className="hidden sm:inline">
+        {status === "copied" ? "Link copied" : status === "failed" ? "Copy blocked, use the address bar" : "Share this view"}
+      </span>
     </Button>
   );
 }
