@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640">
+  <defs>
+    <radialGradient id="a1" cx="0.2" cy="0.3" r="0.6"><stop offset="0" stop-color="#ff9a62" stop-opacity="0.45"/><stop offset="1" stop-color="#ff9a62" stop-opacity="0"/></radialGradient>
+    <radialGradient id="a2" cx="0.85" cy="0.8" r="0.6"><stop offset="0" stop-color="#c81f73" stop-opacity="0.2"/><stop offset="1" stop-color="#c81f73" stop-opacity="0"/></radialGradient>
+    <filter id="b1"><feGaussianBlur stdDeviation="1.5"/></filter>
+    <filter id="b2"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="b3"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+  <rect width="960" height="640" fill="#fff4ec"/>
+  <rect width="960" height="640" fill="url(#a1)"/>
+  <rect width="960" height="640" fill="url(#a2)"/>
+  <path d="M80 320 Q170 220 260 320 Q170 420 80 320 Z" fill="#fff4ec" stroke="#24122e" stroke-width="8" stroke-linejoin="round"/>
+  <circle cx="170" cy="320" r="44" fill="#ff9a62"/>
+  <circle cx="170" cy="320" r="20" fill="#24122e"/>
+  <circle cx="180" cy="310" r="6" fill="#fff4ec"/>
+  <polygon points="214,320 880,250 880,390" fill="#c81f73" opacity="0.14"/>
+  <line x1="214" y1="320" x2="880" y2="250" stroke="#c81f73" stroke-width="3" stroke-dasharray="10 10"/>
+  <line x1="214" y1="320" x2="880" y2="390" stroke="#c81f73" stroke-width="3" stroke-dasharray="10 10"/>
+  <path d="M300 311 A90 90 0 0 1 300 329" fill="none" stroke="#24122e" stroke-width="4"/>
+  <rect x="330" y="130" width="560" height="380" rx="28" fill="#fff4ec" stroke="#f0c9b8" stroke-width="3" opacity="0.6"/>
+  <g font-family="sans-serif" font-weight="900" fill="#24122e">
+    <text x="400" y="372" font-size="150">A</text>
+    <text x="590" y="356" font-size="96" filter="url(#b1)">A</text>
+    <text x="720" y="344" font-size="64" filter="url(#b2)">A</text>
+    <text x="820" y="336" font-size="40" filter="url(#b3)">A</text>
+  </g>
+  <rect x="400" y="430" width="110" height="34" rx="17" fill="#2e7d4f"/>
+  <rect x="590" y="430" width="110" height="34" rx="17" fill="#2e7d4f"/>
+  <rect x="720" y="430" width="80" height="34" rx="17" fill="#a8641c"/>
+  <rect x="815" y="430" width="56" height="34" rx="17" fill="#b3382c"/>
+</svg>
