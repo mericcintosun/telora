@@ -5,9 +5,8 @@ import { animated, useSpring } from "@react-spring/web";
 import { useDrag } from "@use-gesture/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PosterRecord } from "@/lib/data";
+import type { PosterRecord, VisionProfile } from "@/lib/data";
 import { maxReadableDistanceM } from "@/lib/legibility";
-import { VISION_PROFILES } from "@/lib/data";
 
 const CARD_W = 232;
 const GAP = 12;
@@ -35,10 +34,13 @@ export function PosterDeck({
   posters,
   activeId,
   onSelect,
+  profile,
 }: {
   posters: PosterRecord[];
   activeId: string;
   onSelect: (id: string) => void;
+  /** Profile used for the "N blocks lost at the spot" line on each card (20/20 baseline). */
+  profile: VisionProfile;
 }) {
   const reduced = usePrefersReducedMotion();
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -83,7 +85,13 @@ export function PosterDeck({
     { axis: "x", filterTaps: true, pointer: { touch: true } }
   );
 
-  const profile = VISION_PROFILES[0];
+  if (posters.length === 0) {
+    return (
+      <p className="rounded-2xl border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted-foreground">
+        No posters yet. Upload one below.
+      </p>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2">

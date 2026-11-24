@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { POSTERS, VISION_PROFILES } from "@/lib/data";
+import { getAdapter } from "@/lib/adapter";
 import { BASE_THRESHOLD_ARCMIN, SCAN_DISTANCES_M, capHeightPt, formatMeters, maxReadableDistanceM } from "@/lib/legibility";
 
 export const metadata: Metadata = {
-  title: "How Telora works",
+  title: "How it works",
   description: "The distance model, the OCR scan and the vision profiles behind Telora, with the simplifications spelled out.",
 };
 
@@ -21,9 +21,11 @@ function modelDistanceForPt(pt: number): number {
   return capMm / Math.tan(((BASE_THRESHOLD_ARCMIN / 60) * Math.PI) / 180) / 1000;
 }
 
-export default function AboutPage() {
-  const sample = POSTERS[0];
-  const twenty = VISION_PROFILES[0];
+export default async function AboutPage() {
+  const adapter = getAdapter();
+  const [posters, profiles] = await Promise.all([adapter.listPosters(), adapter.listProfiles()]);
+  const sample = posters.find((p) => p.blocks.length >= 2) ?? null;
+  const twenty = profiles.find((p) => p.id === "2020") ?? profiles[0] ?? null;
 
   return (
     <article className="telora-enter mx-auto flex max-w-3xl flex-col gap-10 pt-10">
@@ -41,8 +43,14 @@ export default function AboutPage() {
         <div className="flex flex-col gap-3 text-base leading-relaxed">
           <p>
             <strong>Physical size.</strong> You pick the paper (A3 to A0). Every block&apos;s capital height becomes
-            millimetres on that sheet. The {sample.blocks[1].label.toLowerCase()} on &ldquo;{sample.title}&rdquo; prints at{" "}
-            {Math.round(capHeightPt(sample.blocks[1], sample.intendedSize))} pt on {sample.intendedSize}.
+            millimetres on that sheet.
+            {sample && (
+              <>
+                {" "}
+                The {sample.blocks[1].label.toLowerCase()} on &ldquo;{sample.title}&rdquo; prints at{" "}
+                {Math.round(capHeightPt(sample.blocks[1], sample.intendedSize))} pt on {sample.intendedSize}.
+              </>
+            )}
           </p>
           <p>
             <strong>Visual angle.</strong> At distance d, a letter of height h covers 2 atan(h / 2d) of your view. We
@@ -55,9 +63,16 @@ export default function AboutPage() {
             deuteranopia trap of red text on green.
           </p>
           <p>
-            <strong>Verdict.</strong> Maximum distance is cap height over tan(threshold). For the sample poster that
-            gives the date {formatMeters(maxReadableDistanceM(sample.blocks[1], sample.intendedSize, twenty))} and the
-            headline {formatMeters(maxReadableDistanceM(sample.blocks[0], sample.intendedSize, twenty))}.
+            <strong>Verdict.</strong> Maximum distance is cap height over tan(threshold).
+            {sample && twenty && (
+              <>
+                {" "}
+                For the sample poster that gives the {sample.blocks[1].label.toLowerCase()}{" "}
+                {formatMeters(maxReadableDistanceM(sample.blocks[1], sample.intendedSize, twenty))} and the{" "}
+                {sample.blocks[0].label.toLowerCase()}{" "}
+                {formatMeters(maxReadableDistanceM(sample.blocks[0], sample.intendedSize, twenty))}.
+              </>
+            )}
           </p>
         </div>
       </section>
@@ -66,7 +81,8 @@ export default function AboutPage() {
         <h2 className="text-2xl font-black">Checked against the NC State table</h2>
         <Card>
           <CardContent className="pt-5 sm:pt-6">
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[32rem] text-left text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="py-2 font-semibold">Type size</th>
@@ -84,6 +100,7 @@ export default function AboutPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </CardContent>
         </Card>
       </section>

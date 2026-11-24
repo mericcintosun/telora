@@ -1,10 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PosterLab, type LabState } from "@/components/poster-lab";
 import { SceneSlot } from "@/components/scene-slot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PAPER_SIZES, findPoster, findProfile, type PaperSize } from "@/lib/data";
+import { getAdapter } from "@/lib/adapter";
+import { PAPER_SIZES, type PaperSize } from "@/lib/data";
 import { MAX_DISTANCE_M, MIN_DISTANCE_M } from "@/lib/legibility";
+
+export const metadata: Metadata = {
+  title: "Poster distance lab",
+};
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -15,12 +21,20 @@ function pick(sp: Record<string, string | string[] | undefined>, key: string): s
 
 export default async function Home({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  const poster = findPoster(pick(sp, "poster"));
+  const adapter = getAdapter();
+  const [posters, profiles] = await Promise.all([adapter.listPosters(), adapter.listProfiles()]);
+
+  const requestedId = pick(sp, "poster");
+  const poster = posters.find((p) => p.id === requestedId) ?? posters[0];
   const sizeParam = pick(sp, "size");
-  const size = PAPER_SIZES.includes(sizeParam as PaperSize) ? (sizeParam as PaperSize) : poster.intendedSize;
+  const fallbackSize: PaperSize = poster?.intendedSize ?? "A2";
+  const size = PAPER_SIZES.includes(sizeParam as PaperSize) ? (sizeParam as PaperSize) : fallbackSize;
   const d = Number(pick(sp, "d"));
-  const distanceM = Number.isFinite(d) && d > 0 ? Math.min(MAX_DISTANCE_M, Math.max(MIN_DISTANCE_M, d)) : poster.intendedDistanceM;
-  const initial: LabState = { posterId: poster.id, size, distanceM, profileId: findProfile(pick(sp, "profile")).id };
+  const fallbackDistance = poster?.intendedDistanceM ?? 4;
+  const distanceM = Number.isFinite(d) && d > 0 ? Math.min(MAX_DISTANCE_M, Math.max(MIN_DISTANCE_M, d)) : fallbackDistance;
+  const requestedProfile = pick(sp, "profile");
+  const profile = profiles.find((p) => p.id === requestedProfile) ?? profiles[0];
+  const initial: LabState = { posterId: poster?.id ?? "", size, distanceM, profileId: profile?.id ?? "2020" };
 
   return (
     <div className="flex flex-col gap-16">
@@ -37,7 +51,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
           </Button>
         </div>
 
-        <PosterLab initial={initial} />
+        <PosterLab initial={initial} posters={posters} profiles={profiles} />
       </div>
 
       <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
