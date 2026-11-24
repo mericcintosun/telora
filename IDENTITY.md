@@ -83,3 +83,5 @@ Rules:
 - every interaction is driven by the real seed data; a decorative animation with no product meaning does not count as a signature
 
 ## Amendments (append-only; later phases add dated lines here, never edit anything above)
+
+- 2026-11-24: phase 5 added the Entrance wrapper over telora-fade, the lines gauge and the poster tilt; no identity row changed.
