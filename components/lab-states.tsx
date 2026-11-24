@@ -20,17 +20,17 @@ export function LabSkeleton() {
 
       <div className="flex gap-3 overflow-hidden" aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-24 min-w-[12rem] flex-1 rounded-2xl border border-border bg-card shadow-panel" />
+          <div key={i} className="telora-panel h-24 min-w-[12rem] flex-1" />
         ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]" aria-hidden="true">
-        <div className="flex min-h-[27.5rem] items-center justify-center rounded-2xl border border-border bg-surface p-6 shadow-panel">
-          <div className="aspect-[1/1.414] h-full max-h-[34rem] min-h-[20rem] rounded-xl border border-border bg-card shadow-lift" />
+        <div className="telora-panel flex min-h-[22rem] items-center justify-center bg-surface p-6">
+          <div className="aspect-[1/1.414] h-full max-h-[34rem] min-h-[18rem] rounded-2xl bg-card shadow-lift" />
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-panel">
+          <div className="telora-panel p-6 flex flex-col gap-4">
             <div className="h-5 w-1/3 rounded-xl bg-deep" />
             <div className="grid grid-cols-4 gap-2">
               {[0, 1, 2, 3].map((i) => (
@@ -45,7 +45,7 @@ export function LabSkeleton() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-panel">
+          <div className="telora-panel p-6 flex flex-col gap-3">
             <div className="h-5 w-1/3 rounded-xl bg-deep" />
             {[0, 1, 2, 3, 4].map((i) => (
               <div key={i} className="flex flex-col gap-1.5 border-b border-border pb-3 last:border-0">
@@ -64,7 +64,7 @@ export function LabSkeleton() {
 export function LabErrorState({ reset }: { reset: () => void }) {
   return (
     <div className="telora-enter mx-auto flex max-w-xl flex-col items-center gap-4 py-24 text-center" role="alert">
-      <div className="flex w-full flex-col items-center gap-4 rounded-2xl border-2 border-bad bg-card p-8 shadow-panel">
+      <div className="telora-panel flex w-full flex-col items-center gap-4 p-8">
         <h1 className="text-xl font-semibold text-bad">This view did not load</h1>
         <p className="text-sm text-muted-foreground">Something went wrong while drawing this page, so try it once more.</p>
         <div className="flex flex-wrap justify-center gap-3">
@@ -84,7 +84,7 @@ const EMPTY_LAB_MESSAGE =
 /** No example posters (or no text lines) to show: say what will appear and point at the upload card. */
 export function LabEmptyState({ message = EMPTY_LAB_MESSAGE }: { message?: string }) {
   return (
-    <div className="telora-enter flex min-h-[18rem] flex-col items-center justify-center gap-4 rounded-2xl border border-border bg-surface p-6 text-center shadow-panel">
+    <div className="telora-enter telora-panel flex min-h-[18rem] flex-col items-center justify-center gap-4 bg-surface p-6 text-center">
       <p className="max-w-[40ch] text-sm text-muted-foreground">{message}</p>
       <Button asChild className="min-h-11">
         <a href="#upload">Check your own poster</a>

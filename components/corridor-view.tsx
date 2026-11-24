@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { animated, useSpring } from "@react-spring/web";
 import { LabEmptyState } from "@/components/lab-states";
 import { SimulatedPoster, type BlockScore } from "@/components/simulated-poster";
+import { useReducedMotion } from "@/components/use-reduced-motion";
 import { cn } from "@/lib/utils";
 import type { PaperSize, PosterRecord, VisionProfile } from "@/lib/data";
 import { CORRIDOR_FOV_DEG, apparentHeightShare, formatMeters, type Verdict } from "@/lib/legibility";
@@ -22,18 +22,6 @@ export const CORRIDOR_EMPTY_MESSAGE =
 
 const DOT: Record<Verdict, string> = { legible: "bg-ok", borderline: "bg-warn", lost: "bg-bad" };
 const WORD: Record<Verdict, string> = { legible: "reads", borderline: "borderline", lost: "lost" };
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
-}
 
 /**
  * DEMO step 8: the same simulated poster hung on a hallway wall at the chosen distance.
@@ -57,8 +45,10 @@ export function CorridorView({
   scores: Record<string, BlockScore>;
   showVerdicts: boolean;
 }) {
-  const reduced = usePrefersReducedMotion();
-  const share = Math.min(MAX_SHARE, Math.max(MIN_SHARE, apparentHeightShare(size, distanceM)));
+  const reduced = useReducedMotion();
+  const rawShare = apparentHeightShare(size, distanceM);
+  const clamped = rawShare > MAX_SHARE;
+  const share = Math.min(MAX_SHARE, Math.max(MIN_SHARE, rawShare));
   const spring = useSpring({ h: share * 100, immediate: reduced, config: { tension: 210, friction: 26 } });
 
   if (!poster || poster.blocks.length === 0) {
@@ -74,7 +64,7 @@ export function CorridorView({
   return (
     <figure className="flex w-full max-w-full flex-col gap-3">
       <div
-        className="relative h-[min(60vh,34rem)] min-h-[20rem] w-full max-w-full overflow-hidden rounded-2xl border border-border bg-deep"
+        className="relative h-[min(56vh,34rem)] min-h-[20rem] w-full max-w-full overflow-hidden rounded-2xl bg-deep shadow-panel"
       >
         {/* Ceiling, side walls and floor: flat token panels cut to a one-point perspective. */}
         <div
@@ -156,10 +146,16 @@ export function CorridorView({
             {readable} of {rows.length} lines readable at {distanceM.toFixed(1)} m.
           </strong>{" "}
           <span className="text-muted-foreground">
-            The view spans about {CORRIDOR_FOV_DEG} degrees top to bottom, so the poster is as tall as it looks from
+            The view covers about {CORRIDOR_FOV_DEG} degrees top to bottom, so the poster is as tall as it looks from
             that spot.
           </span>
         </p>
+        {clamped && (
+          <p className="text-xs font-semibold text-muted-foreground">
+            At {distanceM.toFixed(1)} m the {size} sheet is closer than the wall can show, so it is drawn at the
+            wall&apos;s full height. The verdicts still use the real distance.
+          </p>
+        )}
         <ul className="flex flex-wrap gap-2" aria-label="Lines on the wall, weakest first">
           {rows.map((b) => {
             const s = scores[b.id];

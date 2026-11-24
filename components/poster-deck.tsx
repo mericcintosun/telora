@@ -5,24 +5,14 @@ import { animated, useSpring } from "@react-spring/web";
 import { useDrag } from "@use-gesture/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useReducedMotion } from "@/components/use-reduced-motion";
 import type { PosterRecord, VisionProfile } from "@/lib/data";
 import { maxReadableDistanceM } from "@/lib/legibility";
 
+/* Widest card; on a narrow screen a card shrinks to the rail's width so one whole card shows. */
 const CARD_W = 232;
+const MIN_CARD_W = 180;
 const GAP = 12;
-const STEP = CARD_W + GAP;
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = () => setReduced(mq.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return reduced;
-}
 
 /**
  * Signature interaction 1 (K4 spring): a throwable rail of the seed posters.
@@ -46,19 +36,25 @@ export function PosterDeck({
   // open, its original stays highlighted so the rail still shows where you are.
   const posters = allPosters.filter((p) => !p.fixOf);
   const activeId = allPosters.find((p) => p.id === requestedActiveId)?.fixOf ?? requestedActiveId;
-  const reduced = usePrefersReducedMotion();
+  const reduced = useReducedMotion();
   const viewportRef = useRef<HTMLDivElement>(null);
   const draggedRef = useRef(false);
   const [maxScroll, setMaxScroll] = useState(0);
+  const [cardW, setCardW] = useState(CARD_W);
+  const step = cardW + GAP;
   const index = Math.max(0, posters.findIndex((p) => p.id === activeId));
 
-  const restingX = (i: number) => Math.max(-maxScroll, Math.min(0, -i * STEP));
+  const restingX = (i: number) => Math.max(-maxScroll, Math.min(0, -i * step));
   const [{ x }, api] = useSpring(() => ({ x: 0 }));
 
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
-    const measure = () => setMaxScroll(Math.max(0, posters.length * STEP - GAP - el.clientWidth));
+    const measure = () => {
+      const w = Math.max(MIN_CARD_W, Math.min(CARD_W, el.clientWidth));
+      setCardW(w);
+      setMaxScroll(Math.max(0, posters.length * (w + GAP) - GAP - el.clientWidth));
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -66,8 +62,8 @@ export function PosterDeck({
   }, [posters.length]);
 
   useEffect(() => {
-    api.start({ x: Math.max(-maxScroll, Math.min(0, -index * STEP)), immediate: reduced });
-  }, [index, maxScroll, reduced, api]);
+    api.start({ x: Math.max(-maxScroll, Math.min(0, -index * step)), immediate: reduced });
+  }, [index, maxScroll, step, reduced, api]);
 
   const bind = useDrag(
     ({ down, movement: [mx], velocity: [vx], direction: [dx], last, memo }) => {
@@ -79,8 +75,8 @@ export function PosterDeck({
       }
       // Throw: velocity (px/ms) carries the rail further than the finger did.
       const projected = start + mx + dx * vx * 220;
-      const next = Math.max(0, Math.min(posters.length - 1, Math.round(-projected / STEP)));
-      const delta = Math.round(-(mx + dx * vx * 220) / STEP);
+      const next = Math.max(0, Math.min(posters.length - 1, Math.round(-projected / step)));
+      const delta = Math.round(-(mx + dx * vx * 220) / step);
       const target = maxScroll === 0 ? Math.max(0, Math.min(posters.length - 1, index + delta)) : next;
       api.start({ x: restingX(target), immediate: reduced, config: { tension: 240, friction: 24 } });
       if (draggedRef.current && target !== index) onSelect(posters[target].id);
@@ -91,7 +87,7 @@ export function PosterDeck({
 
   if (posters.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted-foreground">
+      <p className="telora-panel max-w-none bg-surface px-4 py-6 text-center text-sm text-muted-foreground">
         No example posters on the rail yet. Drop your own file in the upload card below and the lab scores every
         line it finds.
       </p>
@@ -122,7 +118,7 @@ export function PosterDeck({
               (b) => maxReadableDistanceM(b, p.intendedSize, profile) < p.intendedDistanceM
             ).length;
             return (
-              <div role="listitem" key={p.id} className="shrink-0" style={{ width: CARD_W }}>
+              <div role="listitem" key={p.id} className="shrink-0" style={{ width: cardW }}>
                 <Button
                   variant="choice"
                   aria-pressed={p.id === activeId}

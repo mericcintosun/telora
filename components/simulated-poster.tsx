@@ -73,12 +73,20 @@ export function SimulatedPoster({
 
   const fontPx = (capHeightPct: number) => ((capHeightPct / 100) * heightPx) / 0.7;
   const aspect = poster.aspect ?? A_SERIES_ASPECT;
+  // Portrait sheets size by height. A landscape upload sizes by width instead, capped by the
+  // stage height through container units (the flat stage is a size container), so a phone
+  // no longer squeezes it sideways.
+  const landscape = aspect > 1;
 
   return (
     <div
       ref={frameRef}
-      className="relative h-full max-w-full overflow-hidden rounded-xl shadow-lift"
-      style={{ aspectRatio: aspect, background: TONE_VAR[poster.background] }}
+      className={cn("relative max-w-full overflow-hidden rounded-2xl shadow-lift", landscape ? "h-auto" : "h-full")}
+      style={{
+        aspectRatio: aspect,
+        background: TONE_VAR[poster.background],
+        width: landscape ? `min(100%, ${(aspect * 100).toFixed(2)}cqh)` : undefined,
+      }}
     >
       <svg aria-hidden="true" width="0" height="0" className="absolute">
         <filter id="telora-deutan" colorInterpolationFilters="linearRGB">

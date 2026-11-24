@@ -94,7 +94,7 @@ export function BlockReport({
   return (
     <>
     {variantLink && onOpenPoster && (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface p-3 shadow-panel">
         <p className="text-sm">{variantLink.note}</p>
         <Button
           size="sm"

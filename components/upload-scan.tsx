@@ -107,7 +107,7 @@ export function UploadScan({
             alt="A student holds a magenta event poster at the end of a long peach hallway while distance markers on the floor count away from it"
             width={960}
             height={640}
-            className="rounded-xl border border-border"
+            className="rounded-2xl"
           />
         )}
 

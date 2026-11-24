@@ -1,14 +1,22 @@
 import Link from "next/link";
+import { Entrance } from "@/components/entrance";
 import { PosterLab, type LabState } from "@/components/poster-lab";
 import { SceneSlot } from "@/components/scene-slot";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { getLabData } from "@/lib/adapter";
+import { BASE_THRESHOLD_ARCMIN, PAPER_MM } from "@/lib/legibility";
 import { LabParamsSchema, type LabParams } from "@/lib/schemas";
 
 // No page title: `/` is the product, so it uses the layout default "Telora: know before you print".
 
+// Visual angle of an A2 sheet at 4 m, in arcminutes: 2 atan(h / 2d), the same geometry as the verdicts.
+const a2ArcminAt4m = Math.round(((2 * Math.atan(PAPER_MM.A2.h / (2 * 4000))) * 180 * 60) / Math.PI);
+
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+const DETAILS = "group rounded-2xl bg-card p-4 shadow-panel";
+const SUMMARY = "cursor-pointer font-semibold marker:text-magenta";
 
 export default async function Home({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
@@ -32,112 +40,87 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
 
   return (
     <div className="flex flex-col gap-16">
-      <div className="flex flex-col gap-4 pt-5">
-        <div className="telora-enter flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+      {/* The mesh hero: the claim band (two lines, one CTA) over the live lab. */}
+      <div className="telora-mesh -mx-4 flex flex-col gap-4 px-4 pb-8 pt-5 sm:-mx-6 sm:px-6 lg:rounded-b-[2rem]">
+        <Entrance className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <div className="min-w-0 max-w-3xl">
-            <h1 className="text-2xl font-black leading-tight sm:text-3xl">
-              Telora shows your poster from across the hallway, before you print it.
+            <h1 className="text-2xl leading-tight sm:text-3xl">
+              See which poster line stops reading across the{" "}
+              <span className="telora-gradient-word">hallway</span>
             </h1>
             <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-              For club, science fair and conference posters: drag the distance slider and every line that stops reading
-              turns red, with the metres it lasts.
+              Say where it will hang, and Telora shows the exact metres each line disappears at.
             </p>
           </div>
           <Button asChild size="lg" className="w-full sm:w-auto">
             <a href="#upload">Check your own poster</a>
           </Button>
-        </div>
+        </Entrance>
 
         <PosterLab initial={initial} posters={posters} profiles={profiles} mode={mode} />
       </div>
 
-      <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-        <div className="flex flex-col gap-5">
-          <h2 className="text-3xl font-black leading-tight sm:text-4xl">
-            Every line gets its own <span className="telora-gradient-word">distance</span>
-          </h2>
-          <p className="max-w-[68ch] text-base leading-relaxed">
-            Poster tables tell you that 24 pt is fine from 2 metres. They never look at your file. Telora does: it
-            works out how big each line will be on the paper you print, how big that is in your eye at the spot
-            people will stand, and where it falls under the limit of what a human eye resolves.
+      <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-4">
+          <h2 className="text-3xl leading-tight sm:text-4xl">Every line gets its own distance</h2>
+          <p className="text-base leading-relaxed">
+            Every line on your poster gets its own reading distance and its own fix, worked out from the paper you print
+            on and the spot people stand.
           </p>
-          <div className="telora-enter-list grid gap-3 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Paper to eye</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                A2 is 594 mm tall. From 4 m, that whole sheet spans about 509 arcminutes of your view.
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Eye to blur</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Capitals need about 8 arcmin to read with 20/20 vision. The preview blurs to that limit, live.
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Blur to verdict</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Each block gets a maximum distance and a fix: how many times bigger, or a different color pair.
-              </CardContent>
-            </Card>
-          </div>
+          <details className={DETAILS}>
+            <summary className={SUMMARY}>How the number is worked out</summary>
+            <ol className="telora-enter-list mt-3 flex list-decimal flex-col gap-2 pl-5 text-sm leading-relaxed text-muted-foreground">
+              <li>
+                Paper to eye: A2 is {PAPER_MM.A2.h} mm tall, so from 4 m the sheet spans about {a2ArcminAt4m} arcminutes
+                of your view.
+              </li>
+              <li>
+                Eye to blur: capitals need about {BASE_THRESHOLD_ARCMIN} arcmin to read with 20/20 vision, and the preview
+                blurs to that limit.
+              </li>
+              <li>Blur to verdict: each line gets a maximum distance and a fix, either how many times bigger or a new color pair.</li>
+            </ol>
+          </details>
         </div>
         <Card className="overflow-hidden p-3">
           <SceneSlot
-            n={2}
-            alt="A large peach eye on the left sends a narrow magenta sight cone across the page to a capital letter A, which repeats smaller and blurrier as it moves away"
-            width={960}
-            height={640}
-            className="rounded-xl"
+            n={4}
+            alt="A report panel lists five poster lines, each with a green, amber or red dot and a bar showing how far it reads, next to a small poster with matching outlines"
+            width={1200}
+            height={560}
+            className="rounded-2xl"
           />
         </Card>
       </section>
 
-      <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)]">
+      <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1fr)]">
         <Card className="order-last overflow-hidden p-3 lg:order-first">
           <SceneSlot
-            n={3}
-            alt="Three posters pinned to a cork board, a club night, a science fair results sheet and an academic poster, each text line framed in green, amber or red"
-            width={960}
+            n={5}
+            alt="An empty corridor wall waits under a ceiling light, with a dashed outline where a poster will hang and distance marks on the floor"
+            width={720}
             height={640}
-            className="rounded-xl"
+            className="rounded-2xl"
           />
         </Card>
-        <div className="flex flex-col gap-5">
-          <h2 className="text-3xl font-black leading-tight sm:text-4xl">For the poster you finish the night before</h2>
-          <p className="max-w-[68ch] text-base leading-relaxed">
-            Club nights, science fair boards, conference posters. They get designed 40 cm from a laptop screen and read
-            from 3 to 5 metres down a corridor. The date, the room number and the line under the QR code are the
-            first things to go.
+        <div className="flex flex-col gap-4">
+          <h2 className="text-3xl leading-tight sm:text-4xl">For the poster you finish the night before</h2>
+          <p className="text-base leading-relaxed">
+            Check the wall before the print shop does: everything runs in your browser and nothing is uploaded.
           </p>
-          <details className="group max-w-[68ch] rounded-2xl border border-border bg-card p-4 shadow-panel">
-            <summary className="cursor-pointer font-semibold marker:text-magenta">
-              What the simulation leaves out, and why the numbers still help
-            </summary>
-            <div className="mt-3 flex flex-col gap-3 text-sm leading-relaxed text-muted-foreground">
-              <p>
-                A Gaussian blur is a simplification of the eye&apos;s contrast sensitivity curve, and lighting, glare
-                and viewing angle are ignored. The threshold is calibrated so that 20 pt type reads to about 2.1 m,
-                which matches the widely used NC State poster table.
-              </p>
-              <p>
-                The scores are best read as relative: if your date lasts 2.4 m and your title 9 m, the date is the
-                problem, whatever the light in that hallway.
-              </p>
-            </div>
+          <details className={DETAILS}>
+            <summary className={SUMMARY}>What the simulation leaves out</summary>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              A Gaussian blur stands in for the eye&apos;s contrast sensitivity curve, and lighting, glare and viewing
+              angle are ignored. The threshold is calibrated so 20 pt type reads to about 2.1 m, which matches the NC
+              State poster table, so read the numbers as a ranking: if the date lasts 2.4 m and the title 9 m, the date is
+              the problem.
+            </p>
           </details>
           <p className="text-sm">
-            Everything runs in your browser and nothing is uploaded.{" "}
             <Link href="/about" className="font-semibold text-magenta underline underline-offset-4">
               Read the full model
             </Link>
-            .
           </p>
         </div>
       </section>
