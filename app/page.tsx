@@ -4,9 +4,8 @@ import { PosterLab, type LabState } from "@/components/poster-lab";
 import { SceneSlot } from "@/components/scene-slot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAdapter } from "@/lib/adapter";
-import { PAPER_SIZES, type PaperSize } from "@/lib/data";
-import { MAX_DISTANCE_M, MIN_DISTANCE_M } from "@/lib/legibility";
+import { getLabData } from "@/lib/adapter";
+import { LabParamsSchema, type LabParams } from "@/lib/schemas";
 
 export const metadata: Metadata = {
   title: "Poster distance lab",
@@ -14,26 +13,18 @@ export const metadata: Metadata = {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-function pick(sp: Record<string, string | string[] | undefined>, key: string): string | undefined {
-  const v = sp[key];
-  return typeof v === "string" ? v : undefined;
-}
-
 export default async function Home({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  const adapter = getAdapter();
-  const [posters, profiles] = await Promise.all([adapter.listPosters(), adapter.listProfiles()]);
+  const { posters, profiles, mode } = await getLabData();
 
-  const requestedId = pick(sp, "poster");
-  const poster = posters.find((p) => p.id === requestedId) ?? posters[0];
-  const sizeParam = pick(sp, "size");
-  const fallbackSize: PaperSize = poster?.intendedSize ?? "A2";
-  const size = PAPER_SIZES.includes(sizeParam as PaperSize) ? (sizeParam as PaperSize) : fallbackSize;
-  const d = Number(pick(sp, "d"));
-  const fallbackDistance = poster?.intendedDistanceM ?? 4;
-  const distanceM = Number.isFinite(d) && d > 0 ? Math.min(MAX_DISTANCE_M, Math.max(MIN_DISTANCE_M, d)) : fallbackDistance;
-  const requestedProfile = pick(sp, "profile");
-  const profile = profiles.find((p) => p.id === requestedProfile) ?? profiles[0];
+  // Bad or missing params fall back silently; a broken link never errors.
+  const parsed = LabParamsSchema.safeParse(sp);
+  const params: LabParams = parsed.success ? parsed.data : {};
+
+  const poster = posters.find((p) => p.id === params.poster) ?? posters.find((p) => !p.fixOf) ?? posters[0];
+  const size = params.size ?? poster?.intendedSize ?? "A2";
+  const distanceM = params.d ?? poster?.intendedDistanceM ?? 4;
+  const profile = profiles.find((p) => p.id === params.profile) ?? profiles[0];
   const initial: LabState = { posterId: poster?.id ?? "", size, distanceM, profileId: profile?.id ?? "2020" };
 
   return (
@@ -51,7 +42,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
           </Button>
         </div>
 
-        <PosterLab initial={initial} posters={posters} profiles={profiles} mode={adapter.mode} />
+        <PosterLab initial={initial} posters={posters} profiles={profiles} mode={mode} />
       </div>
 
       <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">

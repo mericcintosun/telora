@@ -65,6 +65,10 @@ export interface PosterRecord {
   imageUrl?: string;
   /** Width / height of the artwork. A-series paper is 1 / 1.4142. */
   aspect?: number;
+  /** Set on a corrected variant: the id of the poster it fixes. Hidden from the poster rail. */
+  fixOf?: string;
+  /** Set on an original that has a corrected variant: the id of that variant. */
+  correctedId?: string;
 }
 
 export interface VisionProfile {
@@ -88,4 +92,4 @@ export interface ScanProgress {
 export type AdapterMode = "fake" | "real";
 
 /** Envelope every API route returns. */
-export type ApiResponse<T> = { ok: true; data: T; mode: AdapterMode } | { ok: false; error: string };
+export type ApiResponse<T> = { ok: true; data: T; mode: AdapterMode } | { ok: false; error: string; hint?: string };
