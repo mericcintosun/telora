@@ -16,9 +16,15 @@
   --t-warn: #a8641c;
   --t-bad: #b3382c;
 
+  /* Violet mesh stop: a tint of ACCENT and INK, no new hex. */
+  --t-violet: color-mix(in oklab, var(--t-accent) 55%, var(--t-ink));
+  --t-shadow-panel: 0 1px 2px color-mix(in oklab, var(--t-ink) 6%, transparent),
+    0 18px 40px -18px color-mix(in oklab, var(--t-accent) 26%, transparent);
+
   --background: var(--t-ground);
   --foreground: var(--t-ink);
-  --card: var(--t-ground);
+  /* D19 panels are white: a white tint of GROUND, so no new hex enters the file. */
+  --card: color-mix(in oklab, var(--t-ground) 30%, white);
   --card-foreground: var(--t-ink);
   --popover: var(--t-ground);
   --popover-foreground: var(--t-ink);
@@ -76,8 +82,7 @@
   --radius-xl: 1.25rem;
   --radius-2xl: 1.5rem;
 
-  --shadow-panel: 0 1px 2px color-mix(in oklab, var(--t-ink) 7%, transparent),
-    0 18px 40px -18px color-mix(in oklab, var(--t-accent) 28%, transparent);
+  --shadow-panel: var(--t-shadow-panel);
   --shadow-lift: 0 2px 4px color-mix(in oklab, var(--t-ink) 8%, transparent),
     0 24px 48px -16px color-mix(in oklab, var(--t-accent) 34%, transparent);
 
@@ -119,14 +124,8 @@ summary:focus-visible {
   border-radius: 0.75rem;
 }
 
-/* The aurora mesh: three large radial gradients at low opacity over the ground. */
 body {
   background-color: var(--t-ground);
-  background-image:
-    radial-gradient(ellipse 60% 45% at 8% 0%, color-mix(in oklab, var(--t-accent) 16%, transparent), transparent 70%),
-    radial-gradient(ellipse 55% 50% at 95% 12%, color-mix(in oklab, var(--t-second) 30%, transparent), transparent 70%),
-    radial-gradient(ellipse 70% 40% at 50% 100%, color-mix(in oklab, var(--t-ink) 9%, transparent), transparent 75%);
-  background-attachment: fixed;
   color: var(--t-ink);
   font-family: var(--font-rh-text), "Segoe UI", system-ui, sans-serif;
 }
@@ -136,6 +135,41 @@ h2,
 h3 {
   font-family: var(--font-rh-display), "Segoe UI", system-ui, sans-serif;
   letter-spacing: -0.015em;
+}
+
+/* One heading scale (h1 > h2 > body) and one body measure. In the base layer so utilities still win. */
+@layer base {
+  h1 {
+    font-size: 1.875rem;
+    line-height: 1.15;
+    font-weight: 900;
+  }
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: 800;
+  }
+  p {
+    max-width: 70ch;
+  }
+}
+
+@layer components {
+  /* The aurora mesh hero: three large radial gradients at low opacity over the ground. */
+  .telora-mesh {
+    background-color: var(--t-ground);
+    background-image:
+      radial-gradient(ellipse 55% 60% at 6% 0%, color-mix(in oklab, var(--t-accent) 18%, transparent), transparent 70%),
+      radial-gradient(ellipse 50% 55% at 96% 8%, color-mix(in oklab, var(--t-second) 32%, transparent), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 55% 100%, color-mix(in oklab, var(--t-violet) 16%, transparent), transparent 75%);
+  }
+
+  /* The aurora panel: white, soft shadow, round. Utilities passed next to it still override. */
+  .telora-panel {
+    background-color: var(--card);
+    border-radius: 1.25rem;
+    box-shadow: var(--t-shadow-panel);
+  }
 }
 
 /* Gradient text is allowed on exactly one headline word in the whole product. */

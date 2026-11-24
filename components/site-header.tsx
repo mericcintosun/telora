@@ -17,10 +17,7 @@ export function SiteHeader() {
           Telora
         </Link>
         <nav className="flex min-w-0 items-center gap-1 sm:gap-4">
-          <HeaderLink href="/about">
-            <span className="sm:hidden">About</span>
-            <span className="hidden sm:inline">How it works</span>
-          </HeaderLink>
+          <HeaderLink href="/about">About</HeaderLink>
           <ShareViewButton />
         </nav>
       </div>

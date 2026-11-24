@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Red_Hat_Display, Red_Hat_Text } from "next/font/google";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
@@ -36,7 +37,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       {/* overflow-x-clip (not hidden) keeps the sticky header working and stops any stray sideways page scroll. */}
       <body className="min-h-screen overflow-x-clip antialiased">
         <SiteHeader />
-        <main className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">{children}</main>
+        <main className="mx-auto max-w-7xl px-4 sm:px-6">{children}</main>
+        <SiteFooter />
       </body>
     </html>
   );

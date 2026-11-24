@@ -1,14 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-/* Aurora panel: a clean light panel floating over the mesh, soft shadow, round corners. */
+/* Aurora panel: white, soft shadow, round corners, no border (the .telora-panel rule in app/globals.css). */
 function Card({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("rounded-2xl border border-border/70 bg-card text-card-foreground shadow-panel", className)}
-      {...props}
-    />
-  );
+  return <div className={cn("telora-panel text-card-foreground", className)} {...props} />;
 }
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return <div className={cn("flex flex-col gap-1.5 p-5 sm:p-6", className)} {...props} />;
