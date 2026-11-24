@@ -13,6 +13,8 @@ export const UploadFileSchema = z.object({
 
 export const PaperSizeSchema = z.enum(["A3", "A2", "A1", "A0"]);
 export const ProfileIdSchema = z.enum(["2020", "2040", "lowcontrast", "deutan"]);
+export const LabViewSchema = z.enum(["flat", "corridor"]);
+export type LabView = z.infer<typeof LabViewSchema>;
 
 export const BlockOcrSchema = z
   .object({
@@ -46,6 +48,8 @@ export const LabParamsSchema = z.object({
     .optional()
     .catch(undefined),
   profile: ProfileIdSchema.optional().catch(undefined),
+  /** Which stage the lab shows: the flat poster (default) or the poster on a corridor wall. */
+  view: LabViewSchema.optional().catch(undefined),
 });
 
 /** `?id=` on the read-only API routes. */

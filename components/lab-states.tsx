@@ -78,14 +78,15 @@ export function LabErrorState({ reset }: { reset: () => void }) {
   );
 }
 
-/** No example posters to show: point straight at the upload card. */
-export function LabEmptyState() {
+const EMPTY_LAB_MESSAGE =
+  "No example posters to show right now. Upload a poster and Telora will score every line it finds.";
+
+/** No example posters (or no text lines) to show: say what will appear and point at the upload card. */
+export function LabEmptyState({ message = EMPTY_LAB_MESSAGE }: { message?: string }) {
   return (
     <div className="telora-enter flex min-h-[18rem] flex-col items-center justify-center gap-4 rounded-2xl border border-border bg-surface p-6 text-center shadow-panel">
-      <p className="max-w-[40ch] text-sm text-muted-foreground">
-        No example posters to show right now. Upload a poster and Telora will score every line it finds.
-      </p>
-      <Button asChild>
+      <p className="max-w-[40ch] text-sm text-muted-foreground">{message}</p>
+      <Button asChild className="min-h-11">
         <a href="#upload">Check your own poster</a>
       </Button>
     </div>

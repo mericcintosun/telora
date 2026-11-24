@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Download, Eye, EyeOff } from "lucide-react";
 import { BlockReport } from "@/components/block-report";
+import { CorridorView } from "@/components/corridor-view";
 import { LabEmptyState } from "@/components/lab-states";
 import { PosterDeck } from "@/components/poster-deck";
 import { SimulatedPoster, type BlockScore } from "@/components/simulated-poster";
@@ -11,13 +12,82 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { PAPER_SIZES, type AdapterMode, type PaperSize, type PosterRecord, type VisionProfile } from "@/lib/data";
+import { CoreFailure, type CoreErrorCode } from "@/lib/errors";
 import { MAX_DISTANCE_M, MIN_DISTANCE_M, maxReadableDistanceM, verdictAt } from "@/lib/legibility";
+import { renderReportPng } from "@/lib/report";
+import type { LabView } from "@/lib/schemas";
 
 export interface LabState {
   posterId: string;
   size: PaperSize;
   distanceM: number;
   profileId: VisionProfile["id"];
+  view?: LabView;
+}
+
+/* The report image has its own sentences per CoreFailure code; the scan hints talk about OCR. */
+const REPORT_HINT: Record<CoreErrorCode, string> = {
+  invalid_input: "This poster has no text lines yet, so there is nothing to put in the report.",
+  upstream_timeout: "Drawing the report took too long, so try again.",
+  upstream_error: "The report image could not be drawn, so try again or take a screenshot of the lab.",
+  parse_failure: "The uploaded image could not be redrawn for the report, so upload it again and retry.",
+  not_configured: "This browser cannot draw the report image, so try a current Chrome, Firefox or Safari.",
+};
+
+/** DEMO step 7: downloads the PNG report of what the lab shows right now. */
+function ReportDownload({
+  poster,
+  size,
+  distanceM,
+  profile,
+}: {
+  poster: PosterRecord | undefined;
+  size: PaperSize;
+  distanceM: number;
+  profile: VisionProfile | undefined;
+}) {
+  const [state, setState] = useState<{ kind: "idle" | "busy" | "done" } | { kind: "error"; code: CoreErrorCode }>({
+    kind: "idle",
+  });
+  const reason = !poster || !profile
+    ? "Pick an example poster or upload your own to get a report."
+    : poster.blocks.length === 0
+      ? "This poster has no text lines yet, so there is nothing to report."
+      : null;
+
+  async function download() {
+    if (!poster || !profile || state.kind === "busy") return;
+    setState({ kind: "busy" });
+    try {
+      await renderReportPng({ poster, size, distanceM, profile });
+      setState({ kind: "done" });
+    } catch (err) {
+      setState({ kind: "error", code: err instanceof CoreFailure ? err.core.error : "upstream_error" });
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Button
+        variant="outline"
+        className="min-h-11 w-full sm:w-auto sm:self-start"
+        onClick={download}
+        disabled={reason !== null || state.kind === "busy"}
+        aria-describedby="report-note"
+      >
+        <Download />
+        {state.kind === "busy" ? "Drawing the report" : "Download PNG report"}
+      </Button>
+      <p id="report-note" className="text-xs text-muted-foreground" aria-live="polite">
+        {reason ??
+          (state.kind === "error"
+            ? REPORT_HINT[state.code]
+            : state.kind === "done"
+              ? "Saved: the poster at this distance, every line's distance and its fix."
+              : "One image with the poster at this distance, every line's distance and its fix. Drawn in this browser.")}
+      </p>
+    </div>
+  );
 }
 
 /**
@@ -48,6 +118,7 @@ export function PosterLab({
   const [distanceM, setDistanceM] = useState(initial.distanceM);
   const [profileId, setProfileId] = useState<VisionProfile["id"]>(initial.profileId);
   const [showVerdicts, setShowVerdicts] = useState(true);
+  const [view, setView] = useState<LabView>(initial.view ?? "flat");
 
   const poster: PosterRecord | undefined = upload ?? posters.find((p) => p.id === posterId) ?? posters[0];
   const profile: VisionProfile = profiles.find((p) => p.id === profileId) ?? profiles[0];
@@ -72,8 +143,9 @@ export function PosterLab({
     params.set("size", size);
     params.set("d", distanceM.toFixed(1));
     params.set("profile", profileId);
+    if (view === "corridor") params.set("view", "corridor");
     window.history.replaceState(null, "", `?${params.toString()}`);
-  }, [posterId, upload, size, distanceM, profileId]);
+  }, [posterId, upload, size, distanceM, profileId, view]);
 
   function selectPoster(id: string) {
     const next = posters.find((p) => p.id === id);
@@ -107,13 +179,16 @@ export function PosterLab({
       {!poster || !profile ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]">
           <LabEmptyState />
-          {uploadCard}
+          <div className="flex min-w-0 flex-col gap-4">
+            {uploadCard}
+            <ReportDownload poster={poster} size={size} distanceM={distanceM} profile={profile} />
+          </div>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]">
-          <Card className="flex flex-col overflow-hidden bg-surface">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3">
-              <p className="text-sm" aria-live="polite">
+          <Card className="flex min-w-0 flex-col overflow-hidden bg-surface">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 sm:px-5">
+              <p className="min-w-0 text-sm" aria-live="polite">
                 <strong>{poster.title}</strong> on {size} at {distanceM.toFixed(1)} m, {profile.label}:{" "}
                 {poster.blocks.length === 0 ? (
                   <span className="font-semibold text-muted-foreground">no text lines to score</span>
@@ -125,27 +200,71 @@ export function PosterLab({
                   </span>
                 )}
               </p>
-              <Button variant="ghost" size="sm" onClick={() => setShowVerdicts((v) => !v)} aria-pressed={showVerdicts}>
-                {showVerdicts ? <EyeOff /> : <Eye />}
-                {showVerdicts ? "Hide verdicts" : "Show verdicts"}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="grid grid-cols-2 gap-1" role="group" aria-label="Stage">
+                  <Button
+                    variant="choice"
+                    size="sm"
+                    className="min-h-11"
+                    aria-pressed={view === "flat"}
+                    onClick={() => setView("flat")}
+                  >
+                    Flat
+                  </Button>
+                  <Button
+                    variant="choice"
+                    size="sm"
+                    className="min-h-11"
+                    aria-pressed={view === "corridor"}
+                    onClick={() => setView("corridor")}
+                  >
+                    Corridor
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-11"
+                  onClick={() => setShowVerdicts((v) => !v)}
+                  aria-pressed={showVerdicts}
+                >
+                  {showVerdicts ? <EyeOff /> : <Eye />}
+                  {showVerdicts ? "Hide verdicts" : "Show verdicts"}
+                </Button>
+              </div>
             </div>
-            <div className="flex h-[min(66vh,41rem)] min-h-[27.5rem] items-center justify-center p-6 pt-9">
-              <SimulatedPoster
-                poster={poster}
-                size={size}
-                distanceM={distanceM}
-                profile={profile}
-                scores={scores}
-                showVerdicts={showVerdicts}
-              />
-            </div>
+            {view === "corridor" ? (
+              <div key="corridor" className="telora-enter p-3 sm:p-5">
+                <CorridorView
+                  poster={poster}
+                  size={size}
+                  distanceM={distanceM}
+                  profile={profile}
+                  scores={scores}
+                  showVerdicts={showVerdicts}
+                />
+              </div>
+            ) : (
+              <div
+                key="flat"
+                className="telora-enter flex h-[min(66vh,41rem)] min-h-[22rem] w-full max-w-full items-center justify-center p-4 pt-9 sm:min-h-[27.5rem] sm:p-6 sm:pt-9"
+              >
+                <SimulatedPoster
+                  poster={poster}
+                  size={size}
+                  distanceM={distanceM}
+                  profile={profile}
+                  scores={scores}
+                  showVerdicts={showVerdicts}
+                />
+              </div>
+            )}
             <p className="border-t border-border px-5 py-3 text-xs text-muted-foreground">
               Hangs at: {poster.hangingSpot}. Owner: {poster.owner}. Last edited {poster.updated}.
             </p>
           </Card>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex min-w-0 flex-col gap-4">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle>Where it hangs</CardTitle>
@@ -157,7 +276,7 @@ export function PosterLab({
                   </span>
                   <div className="grid grid-cols-4 gap-2" role="group" aria-labelledby="size-label">
                     {PAPER_SIZES.map((s) => (
-                      <Button key={s} variant="choice" aria-pressed={size === s} onClick={() => setSize(s)}>
+                      <Button key={s} variant="choice" className="min-h-11" aria-pressed={size === s} onClick={() => setSize(s)}>
                         {s}
                       </Button>
                     ))}
@@ -174,6 +293,7 @@ export function PosterLab({
                     min={MIN_DISTANCE_M}
                     max={MAX_DISTANCE_M}
                     step={0.1}
+                    className="min-h-11"
                     value={distanceM}
                     onChange={(e) => setDistanceM(Number(e.target.value))}
                     aria-valuetext={`${distanceM.toFixed(1)} metres`}
@@ -193,6 +313,7 @@ export function PosterLab({
                       <Button
                         key={p.id}
                         variant="choice"
+                        className="h-auto min-h-11 whitespace-normal py-2"
                         aria-pressed={profileId === p.id}
                         onClick={() => setProfileId(p.id)}
                         title={p.note}
@@ -220,6 +341,7 @@ export function PosterLab({
                   scores={scores}
                   onOpenPoster={upload ? undefined : selectPoster}
                 />
+                <ReportDownload poster={poster} size={size} distanceM={distanceM} profile={profile} />
               </CardContent>
             </Card>
 

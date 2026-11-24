@@ -40,6 +40,7 @@ export function SimulatedPoster({
   profile,
   scores,
   showVerdicts,
+  compact = false,
 }: {
   poster: PosterRecord;
   size: PaperSize;
@@ -47,6 +48,8 @@ export function SimulatedPoster({
   profile: VisionProfile;
   scores: Record<string, BlockScore>;
   showVerdicts: boolean;
+  /** Outlines only, no "Label: N m max" chips. The corridor view hangs the poster too small for them. */
+  compact?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [heightPx, setHeightPx] = useState(SSR_HEIGHT_PX);
@@ -137,15 +140,17 @@ export function SimulatedPoster({
                 }}
               >
                 {b.h === undefined ? b.text : null}
-                <span
-                  key={score.verdict}
-                  className={cn(
-                    "telora-enter absolute -top-6 left-0 rounded-full px-2 py-0.5 font-sans text-2xs font-semibold leading-tight whitespace-nowrap text-on-accent",
-                    CHIP[score.verdict]
-                  )}
-                >
-                  {b.label}: {formatMeters(score.maxDistanceM)} max
-                </span>
+                {!compact && (
+                  <span
+                    key={score.verdict}
+                    className={cn(
+                      "telora-enter absolute -top-6 left-0 rounded-full px-2 py-0.5 font-sans text-2xs font-semibold leading-tight whitespace-nowrap text-on-accent",
+                      CHIP[score.verdict]
+                    )}
+                  >
+                    {b.label}: {formatMeters(score.maxDistanceM)} max
+                  </span>
+                )}
               </div>
             );
           })}

@@ -106,6 +106,19 @@ export function blurSigmaPx(renderHeightPx: number, size: PaperSize, distanceM: 
   return sigmaArcmin * pxPerArcmin;
 }
 
+/** Vertical field of view the corridor scene stands for, in degrees (a relaxed human gaze). */
+export const CORRIDOR_FOV_DEG = 30;
+
+/**
+ * Share (0 to 1) of a view `fovDeg` tall that a poster of this paper size fills at `distanceM`.
+ * Same visual angle math as the verdicts: 2 atan(h / 2d), so the apparent size tracks size / distance.
+ */
+export function apparentHeightShare(size: PaperSize, distanceM: number, fovDeg: number = CORRIDOR_FOV_DEG): number {
+  const heightMm = PAPER_MM[size].h;
+  const posterDeg = (2 * Math.atan(heightMm / (2 * distanceM * 1000)) * 180) / Math.PI;
+  return posterDeg / fovDeg;
+}
+
 export function formatMeters(m: number): string {
   if (m >= MAX_DISTANCE_M) return "10+ m";
   if (m < 1) return `${Math.round(m * 100)} cm`;

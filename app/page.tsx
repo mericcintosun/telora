@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { PosterLab, type LabState } from "@/components/poster-lab";
 import { SceneSlot } from "@/components/scene-slot";
@@ -7,9 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLabData } from "@/lib/adapter";
 import { LabParamsSchema, type LabParams } from "@/lib/schemas";
 
-export const metadata: Metadata = {
-  title: "Poster distance lab",
-};
+// No page title: `/` is the product, so it uses the layout default "Telora: know before you print".
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -25,19 +22,28 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
   const size = params.size ?? poster?.intendedSize ?? "A2";
   const distanceM = params.d ?? poster?.intendedDistanceM ?? 4;
   const profile = profiles.find((p) => p.id === params.profile) ?? profiles[0];
-  const initial: LabState = { posterId: poster?.id ?? "", size, distanceM, profileId: profile?.id ?? "2020" };
+  const initial: LabState = {
+    posterId: poster?.id ?? "",
+    size,
+    distanceM,
+    profileId: profile?.id ?? "2020",
+    view: params.view ?? "flat",
+  };
 
   return (
     <div className="flex flex-col gap-16">
       <div className="flex flex-col gap-4 pt-5">
         <div className="telora-enter flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-          <div className="max-w-3xl">
-            <h1 className="text-2xl font-black leading-tight sm:text-3xl">See your poster from across the hallway, before you print it.</h1>
+          <div className="min-w-0 max-w-3xl">
+            <h1 className="text-2xl font-black leading-tight sm:text-3xl">
+              Telora shows your poster from across the hallway, before you print it.
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-              Drag the distance slider. Every line that stops reading turns red and tells you how many metres it lasts.
+              For club, science fair and conference posters: drag the distance slider and every line that stops reading
+              turns red, with the metres it lasts.
             </p>
           </div>
-          <Button asChild size="lg">
+          <Button asChild size="lg" className="w-full sm:w-auto">
             <a href="#upload">Check your own poster</a>
           </Button>
         </div>
@@ -55,7 +61,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
             works out how big each line will be on the paper you print, how big that is in your eye at the spot
             people will stand, and where it falls under the limit of what a human eye resolves.
           </p>
-          <div className="telora-enter-list grid gap-3 sm:grid-cols-3">
+          <div className="telora-enter-list grid gap-3 md:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Paper to eye</CardTitle>
