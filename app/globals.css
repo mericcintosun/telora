@@ -1,31 +1,41 @@
 @import "tailwindcss";
 
-/* shadcn-style design tokens. The ONLY place colors live: restyle a project by
-   editing these variables from IDENTITY.md; components never carry hex.
-   TEMPLATE placeholder palette: warm neutral, deliberately NOT the navy ground +
-   teal accent the scaffold rules ban, so a token the scaffold forgets to
-   rewrite cannot reintroduce that look. Every value below is replaced. */
+/* Telora design tokens. Every hex below comes from IDENTITY.md (D19 aurora).
+   Components never carry a hex: they use these variables or the Tailwind
+   utilities generated from them. */
 :root {
-  --background: oklch(0.985 0.004 80);
-  --foreground: oklch(0.2 0.01 60);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.01 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.01 60);
-  --primary: oklch(0.45 0.12 40);
-  --primary-foreground: oklch(0.98 0.005 80);
-  --secondary: oklch(0.94 0.008 80);
-  --secondary-foreground: oklch(0.25 0.01 60);
-  --muted: oklch(0.94 0.008 80);
-  --muted-foreground: oklch(0.5 0.01 60);
-  --accent: oklch(0.92 0.02 60);
-  --accent-foreground: oklch(0.2 0.01 60);
-  --destructive: oklch(0.55 0.19 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.88 0.01 80);
-  --input: oklch(0.88 0.01 80);
-  --ring: oklch(0.45 0.12 40);
-  --radius: 0.375rem;
+  --t-ground: #fff4ec;
+  --t-surface: #ffe9dc;
+  --t-deep: #ffd9c7;
+  --t-line: #f0c9b8;
+  --t-ink: #24122e;
+  --t-accent: #c81f73;
+  --t-on-accent: #fff4ec;
+  --t-second: #ff9a62;
+  --t-ok: #2e7d4f;
+  --t-warn: #a8641c;
+  --t-bad: #b3382c;
+
+  --background: var(--t-ground);
+  --foreground: var(--t-ink);
+  --card: var(--t-ground);
+  --card-foreground: var(--t-ink);
+  --popover: var(--t-ground);
+  --popover-foreground: var(--t-ink);
+  --primary: var(--t-accent);
+  --primary-foreground: var(--t-on-accent);
+  --secondary: var(--t-surface);
+  --secondary-foreground: var(--t-ink);
+  --muted: var(--t-surface);
+  --muted-foreground: color-mix(in oklab, var(--t-ink) 68%, var(--t-ground));
+  --accent: var(--t-deep);
+  --accent-foreground: var(--t-ink);
+  --destructive: var(--t-bad);
+  --destructive-foreground: var(--t-ground);
+  --border: var(--t-line);
+  --input: var(--t-line);
+  --ring: var(--t-accent);
+  --radius: 1rem;
 }
 
 @theme inline {
@@ -48,13 +58,137 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+
+  --color-surface: var(--t-surface);
+  --color-deep: var(--t-deep);
+  --color-ink: var(--t-ink);
+  --color-magenta: var(--t-accent);
+  --color-on-accent: var(--t-on-accent);
+  --color-peach: var(--t-second);
+  --color-ok: var(--t-ok);
+  --color-warn: var(--t-warn);
+  --color-bad: var(--t-bad);
+
+  /* RADIUS round: nothing on a card, panel or control goes below 0.75rem. */
+  --radius-sm: 0.75rem;
+  --radius-md: 0.875rem;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-panel: 0 1px 2px color-mix(in oklab, var(--t-ink) 7%, transparent),
+    0 18px 40px -18px color-mix(in oklab, var(--t-accent) 28%, transparent);
+  --shadow-lift: 0 2px 4px color-mix(in oklab, var(--t-ink) 8%, transparent),
+    0 24px 48px -16px color-mix(in oklab, var(--t-accent) 34%, transparent);
+
+  --font-display: var(--font-rh-display), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-rh-text), "Segoe UI", system-ui, sans-serif;
 }
 
+/* The aurora mesh: three large radial gradients at low opacity over the ground. */
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--t-ground);
+  background-image:
+    radial-gradient(ellipse 60% 45% at 8% 0%, color-mix(in oklab, var(--t-accent) 16%, transparent), transparent 70%),
+    radial-gradient(ellipse 55% 50% at 95% 12%, color-mix(in oklab, var(--t-second) 30%, transparent), transparent 70%),
+    radial-gradient(ellipse 70% 40% at 50% 100%, color-mix(in oklab, var(--t-ink) 9%, transparent), transparent 75%);
+  background-attachment: fixed;
+  color: var(--t-ink);
+  font-family: var(--font-rh-text), "Segoe UI", system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-rh-display), "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -0.015em;
+}
+
+/* Gradient text is allowed on exactly one headline word in the whole product. */
+.telora-gradient-word {
+  background-image: linear-gradient(100deg, var(--t-accent), var(--t-second));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* MOTION M5: opacity only, linear, 280ms, no transform. */
+@keyframes telora-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.telora-enter {
+  animation: telora-fade 280ms linear both;
+}
+
+.telora-enter-list > * {
+  animation: telora-fade 280ms linear both;
+}
+.telora-enter-list > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.telora-enter-list > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.telora-enter-list > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+.telora-enter-list > *:nth-child(n + 5) {
+  animation-delay: 240ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .telora-enter,
+  .telora-enter-list > * {
+    animation: none;
+  }
+}
+
+/* Distance slider: native range input restyled with tokens. */
+.telora-range {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  width: 100%;
+  height: 2rem;
+  cursor: pointer;
+}
+.telora-range::-webkit-slider-runnable-track {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--t-surface), var(--t-deep));
+  border: 1px solid var(--t-line);
+}
+.telora-range::-moz-range-track {
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--t-surface), var(--t-deep));
+  border: 1px solid var(--t-line);
+}
+.telora-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: -0.45rem;
+  border-radius: 999px;
+  background: var(--t-accent);
+  border: 3px solid var(--t-ground);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--t-accent) 40%, transparent);
+}
+.telora-range::-moz-range-thumb {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: var(--t-accent);
+  border: 3px solid var(--t-ground);
+}
+.telora-range:focus-visible {
+  outline: 2px solid var(--t-accent);
+  outline-offset: 4px;
+  border-radius: 999px;
 }
