@@ -6,8 +6,8 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { VISION_PROFILES } from "../lib/data/seed";
-import { PAPER_MM, formatMeters, maxReadableDistanceM } from "../lib/legibility";
+import { POSTERS, VISION_PROFILES } from "../lib/data/seed";
+import { PAPER_MM, formatMeters, maxReadableDistanceM, verdictAt } from "../lib/legibility";
 import type { PaperSize, PosterBlock } from "../lib/types";
 
 const ROOT = process.cwd();
@@ -86,6 +86,37 @@ function proofCalibration(): ProofResult {
   };
 }
 
+function proofCorrected(): ProofResult {
+  const fixed = POSTERS.find((p) => p.fixOf);
+  const profile = VISION_PROFILES.find((p) => p.id === "2020");
+  if (!fixed || !profile) {
+    return {
+      name: "corrected",
+      body: "Not run in this build: no corrected poster or no 20/20 profile in the seed.",
+      summary: "corrected: not run (missing seed data)",
+    };
+  }
+  const original = POSTERS.find((p) => p.id === fixed.fixOf);
+  const target = fixed.intendedDistanceM;
+  const rows = fixed.blocks.map((b) => {
+    const m = maxReadableDistanceM(b, fixed.intendedSize, profile);
+    const before = original?.blocks.find((o) => o.label === b.label);
+    const was = original && before ? formatMeters(maxReadableDistanceM(before, original.intendedSize, profile)) : "n/a";
+    return { label: b.label, was, m, verdict: verdictAt(m, target) };
+  });
+  const table = [
+    `| Block | Original | Corrected (${fixed.intendedSize}, 20/20) | Verdict at ${target.toFixed(1)} m |`,
+    "| --- | --- | --- | --- |",
+    ...rows.map((r) => `| ${r.label} | ${r.was} | ${formatMeters(r.m)} (${r.m.toFixed(2)} m) | ${r.verdict} |`),
+  ].join("\n");
+  const green = rows.filter((r) => r.verdict === "legible").length;
+  return {
+    name: "corrected",
+    body: `"${fixed.title}", computed with \`lib/legibility.ts\` by \`npm run proof\`.\n\n${table}`,
+    summary: `corrected: ${green} of ${rows.length} blocks green at ${target} m`,
+  };
+}
+
 function proofOcr(): ProofResult {
   return {
     name: "ocr",
@@ -119,7 +150,12 @@ function writeBlocks(results: ProofResult[]): string {
 }
 
 try {
-  const results = [safe("tests", proofTests), safe("calibration", proofCalibration), safe("ocr", proofOcr)];
+  const results = [
+    safe("tests", proofTests),
+    safe("calibration", proofCalibration),
+    safe("ocr", proofOcr),
+    safe("corrected", proofCorrected),
+  ];
   for (const r of results) console.log(r.summary);
   let readme: string;
   try {

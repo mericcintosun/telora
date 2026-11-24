@@ -23,14 +23,26 @@ Every block gets a line like "Event date: 2.4 m max" and a fix: "enlarge it 1.7x
 
 Drag the distance slider from 1 m to 6 m and you watch the poster blur and the lines turn red one by one.
 
-Upload your own poster and Telora also re-reads it with OCR at 8 distances, so each line gets a second opinion: "OCR: 2.0 m, model: 2.4 m".
+Upload your own poster (PNG, JPG, WebP, or the first page of a PDF) and Telora also re-reads it with OCR at 8 distances, so each line gets a second opinion: "OCR: 2.0 m, model: 2.4 m".
+
+On the club poster, "Open the corrected poster" in the report loads a version with every lost line enlarged, and it reads green at 4 m.
+
+## What works
+
+- The example posters load on `/` with no click, from the seed through one adapter, with a fallback chain (active adapter, then fake adapter, then the seed constants) in `getLabData` (`lib/adapter/index.ts`).
+- Live blur preview, verdict outlines, per-line distances and fix recipes, for four vision profiles and four paper sizes.
+- The corrected Robot Sumo Night poster (DEMO step 6), opened from the report and back again.
+- Upload scan of PNG, JPG, WebP and PDF (first page through pdfjs-dist), with the 8-distance OCR confirmation, in the browser.
+- Every setting lives in the URL. Bad URL params fall back to defaults without an error (zod, `LabParamsSchema`).
+- Loading, error and empty states for the lab (`components/lab-states.tsx`).
 
 ## How it uses its tech
 
 There is no sponsor SDK in this hackathon. The technical core is:
 
-- **Tesseract.js** scans an uploaded PNG, JPG or WebP in Web Workers and returns every text line with its bounding box. The line height becomes the letter height the model scores. It then re-reads the poster blurred to 8 distances to confirm the model (see below).
-- **zod** checks the uploaded file (type and size) before any scan logic runs, and validates the OCR result shape.
+- **Tesseract.js** scans an uploaded PNG, JPG or WebP in Web Workers and returns every text line with its bounding box. The line height becomes the letter height the model scores. It then re-reads the poster blurred to 8 distances to confirm the model (see below). The engine starts loading while the page is idle, so the first upload does not wait on the download.
+- **pdfjs-dist** (pdf.js) renders the first page of an uploaded PDF to a canvas at a 1600 px long edge, in the browser (`lib/pdf.ts`). That canvas then takes the same scan path as an image. It is loaded only when a PDF is dropped.
+- **zod** checks the uploaded file (type and size) before any scan logic runs, validates the OCR result shape, the URL params on `/` and the `?id=` on the two API routes.
 - **Canvas 2D** measures luminance contrast inside each line box, once as-is and once after the **Machado 2009 deuteranopia matrix**.
 - **CSS filters** apply the distance blur, a contrast cut for the low-contrast profile, and an SVG `feColorMatrix` with the same Machado matrix for the deuteranopia preview.
 - **react-spring and @use-gesture** drive the poster rail: throw it and the release velocity decides which example loads.
@@ -53,11 +65,27 @@ The distance model is geometry. The OCR confirmation is a second, independent si
 
 **Limits.** Each worker load has a timeout and exactly one retry, each read has its own timeout. If the confirmation fails, the poster still shows its model distances and the card shows a one-sentence reason. Results are cached in memory for the tab, keyed by the SHA-256 of the file plus paper size and profile, so the same file reads identically the second time.
 
-**Example posters.** With `ADAPTER_MODE=fake` (the default) the four example posters carry hand-written sample OCR numbers (`lib/data/ocr-samples.ts`), labelled "Sample OCR" in the report. With `ADAPTER_MODE=real` they carry none. Uploads always get the live check.
+**Example posters.** With `ADAPTER_MODE=fake` (the default) the four example posters carry hand-written sample OCR numbers (`lib/data/ocr-samples.ts`), labelled "Sample OCR" in the report. With `ADAPTER_MODE=real` they carry none. The corrected club poster carries none in either mode. Uploads always get the live check.
 
 <!-- PROOF:BEGIN ocr -->
 Not run in this build: the 8-distance OCR needs a browser and this runner has none.
 <!-- PROOF:END ocr -->
+
+## The corrected poster
+
+Robot Sumo Night is lost at 4 m on A2: the date reads to 2.4 m, the venue to 1.7 m, the QR caption to 1.1 m. The report's fix recipe says "enlarge it 1.7x" for the date, which brings it to exactly 4.0 m. Exactly 4.0 m is still amber (borderline), because green needs 15% to spare. So the corrected version (`robot-sumo-night-fixed` in `lib/data/seed.ts`) enlarges the date 2.1x and every other lost line until it reads to about 5 m, and moves lines down so nothing overlaps. `tests/corrected.test.ts` checks every block is green at 4 m for 20/20.
+
+<!-- PROOF:BEGIN corrected -->
+"Robot Sumo Night, corrected", computed with `lib/legibility.ts` by `npm run proof`.
+
+| Block | Original | Corrected (A2, 20/20) | Verdict at 4.0 m |
+| --- | --- | --- | --- |
+| Headline | 9.0 m | 9.0 m (9.01 m) | legible |
+| Event date | 2.4 m | 5.0 m (4.98 m) | legible |
+| Venue | 1.7 m | 5.0 m (5.01 m) | legible |
+| Pitch | 1.5 m | 5.0 m (4.98 m) | legible |
+| QR caption | 1.1 m | 5.0 m (4.98 m) | legible |
+<!-- PROOF:END corrected -->
 
 ## What we learned
 
@@ -80,7 +108,8 @@ Computed with `lib/legibility.ts` by `npm run proof`.
 
 - Next.js 15 (App Router), React 19, TypeScript strict, Tailwind CSS v4, shadcn-style primitives (Radix Slot, class-variance-authority, clsx, tailwind-merge)
 - Tesseract.js 6 (in-browser OCR)
-- zod 3 (upload and OCR result validation)
+- pdfjs-dist 5 (first page of an uploaded PDF, in the browser)
+- zod 3 (upload, OCR result, URL param and API id validation)
 - @react-spring/web 10 and @use-gesture/react 10
 - lucide-react icons
 - Red Hat Display and Red Hat Text via next/font
@@ -97,33 +126,41 @@ npm run dev
 
 No secrets are needed. `.env.example` lists one optional key, `ADAPTER_MODE` (`fake` by default: example posters show sample OCR numbers; `real`: they show none). `npm run seed` writes the seed to `fixtures/seed-snapshot.json`.
 
-Where things live: types in `lib/types.ts`, the four example posters in `lib/data/seed.ts`, their sample OCR numbers in `lib/data/ocr-samples.ts`, the adapter in `lib/adapter/`, the distance model in `lib/legibility.ts`, the OCR scan and 8-distance confirmation in `lib/ocr.ts`, its pure logic in `lib/confirm.ts`, constants in `lib/config.ts`.
+### Resetting the demo
+
+```bash
+npm run demo:reset   # rewrites fixtures/seed-snapshot.json twice, checks the bytes match, prints the clean demo URL
+```
+
+There is no database, no server store and no chain, so there is no migration command and nothing to wipe. The whole system state is the seed constants in `lib/data/seed.ts`, the URL search params, and the tab's in-memory scan cache (`lib/cache.ts`). Uploads never leave the browser. Reloading the page resets the tab; opening `/?poster=robot-sumo-night&size=A2&d=4.0&profile=2020` gives the clean demo start.
+
+Where things live: types in `lib/types.ts`, the four example posters and the corrected club poster in `lib/data/seed.ts`, their sample OCR numbers in `lib/data/ocr-samples.ts`, the adapter in `lib/adapter/`, the distance model in `lib/legibility.ts`, the OCR scan and 8-distance confirmation in `lib/ocr.ts`, its pure logic in `lib/confirm.ts`, constants in `lib/config.ts`.
 
 ## Tests
 
 ```bash
-npm test        # node:test through tsx: word matching, OCR distance rule, wording, zod schemas, sample table
+npm test        # node:test through tsx: word matching, OCR distance rule, wording, zod schemas, sample table, corrected poster
 npm run proof   # runs the tests and the calibration, rewrites the PROOF blocks in this README, always exits 0
 ```
 
 <!-- PROOF:BEGIN tests -->
-Tests: 12 passed, 0 failed (1 file, node:test through tsx, written by `npm run proof`).
+Tests: 16 passed, 0 failed (2 files, node:test through tsx, written by `npm run proof`).
 <!-- PROOF:END tests -->
 
 ## Built during IdeaLab Hacks
 
 Before the event: nothing but a generic Next.js starter template (layout, Tailwind setup, empty button/card/badge/input primitives).
 
-During the event: everything in this repository's commit history, starting with the scaffold commits. That covers the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the 8-distance OCR confirmation, the throwable poster rail, the adapter and API routes, the tests and proof script, every illustration and all copy.
+During the event: everything in this repository's commit history, starting with the scaffold commits. That covers the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the 8-distance OCR confirmation, PDF upload through pdfjs-dist, the corrected club poster, the throwable poster rail, the adapter with its fallback chain and API routes, the loading, error and empty states, the demo reset script, the tests and proof script, every illustration and all copy.
 
-## Planned
+## Not built yet
 
-Not built yet. None of these run today:
+None of these run today:
 
-- PDF upload (first page through pdf.js).
 - A corridor view that shows the poster small on a wall in perspective.
 - A downloadable PNG report with every block's verdict and fix.
-- A corrected version of the club poster that reads all green at 4 m.
+- A spring gauge on the lost-line count and a pointer tilt on the poster.
+- Mobile layout polish.
 
 ## AI use
 
@@ -135,6 +172,6 @@ At runtime there is no language model and no hosted AI service. The only model t
 
 ## Credits
 
-- Tesseract.js (Apache 2.0), zod (MIT), react-spring (MIT), @use-gesture (MIT), lucide-react (ISC), Next.js (MIT), tsx (MIT)
+- Tesseract.js (Apache 2.0), pdfjs-dist by Mozilla (Apache-2.0), zod (MIT), react-spring (MIT), @use-gesture (MIT), lucide-react (ISC), Next.js (MIT), tsx (MIT)
 - Machado, Oliveira and Fernandes (2009), "A Physiologically-based Model for Simulation of Color Vision Deficiency"
 - NC State "Legible Viewing Distance for Posters and Exhibits" table, used as the calibration anchor

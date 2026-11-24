@@ -9,7 +9,14 @@ Read `IDENTITY.md` before any visual change. It overrides taste. Then `HANDOFF.m
 - `npm run seed` (writes `fixtures/seed-snapshot.json` from `lib/data/seed.ts`, same bytes every run)
 - `npm run dev` (http://localhost:3000)
 - `npm test` (node:test through tsx, `tests/*.test.ts`: pure OCR confirmation logic, schemas, sample table)
-- `npm run proof` (runs the tests and the calibration, rewrites the `PROOF:BEGIN/END` blocks in README.md, always exits 0)
+- `npm run proof` (runs the tests and the calibration, rewrites the `PROOF:BEGIN/END` blocks in README.md: `ocr`, `calibration`, `tests`, `corrected`; always exits 0)
+- `npm run demo:reset` (rewrites the seed snapshot twice through `scripts/seed.ts`, fails if the bytes differ, prints the clean demo URL). No store, no migration.
+
+## Real vs mocked
+
+- **Real:** distance model, blur preview, deuteranopia matrix, verdicts, fix recipes, URL state (zod `LabParamsSchema`), Tesseract.js upload scan with the 8-distance OCR confirmation, PDF first page through pdfjs-dist (`lib/pdf.ts`), idle engine warm-up, tab cache.
+- **Seeded:** 5 posters (4 originals plus the corrected `robot-sumo-night-fixed`) and 4 vision profiles. Seed OCR numbers are samples under fake mode, absent under real mode, and absent on the corrected poster in both.
+- **Fallback:** `getLabData()` in `lib/adapter/index.ts`: active adapter, then fake adapter, then seed constants.
 
 ## Stack pitfalls
 
@@ -17,6 +24,7 @@ Read `IDENTITY.md` before any visual change. It overrides taste. Then `HANDOFF.m
 - Tailwind v4 with no config file. Tokens live in `app/globals.css` (`:root` hexes mapped by `@theme inline`). No hex anywhere else in `app/` or `components/`; the OG image reads `lib/og-colors.ts`.
 - TypeScript strict.
 - Tesseract.js and the kit packages (`@react-spring/web`, `@use-gesture/react`) are imported only in `"use client"` components.
+- `pdfjs-dist` is imported only with a dynamic `import()` inside `renderFirstPage` (`lib/pdf.ts`), never at module top level. `next.config.ts` aliases its optional `canvas` dependency to `false`.
 - No server key anywhere. The only env keys are `ADAPTER_MODE` (read only in `lib/adapter/index.ts`; `fake` gives seed posters sample OCR numbers, `real` gives none) and the build-time `NEXT_PUBLIC_BRAND_FILES`. The real OCR runs in the browser and needs no key.
 - Core constants live in `lib/config.ts` (reads no env). Error codes in `lib/errors.ts`; the UI switches on the code. Pure confirmation logic in `lib/confirm.ts` keeps relative imports so `tsx` runs it without the path alias.
 - Data flows through one seam: `getAdapter()` in `lib/adapter`. Pages pass posters and profiles to client components as props; components never import the seed.
