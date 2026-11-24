@@ -4,9 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, Eye, EyeOff } from "lucide-react";
 import { BlockReport } from "@/components/block-report";
 import { CorridorView } from "@/components/corridor-view";
+import { Entrance } from "@/components/entrance";
 import { LabEmptyState } from "@/components/lab-states";
+import { LinesGauge } from "@/components/lines-gauge";
 import { PosterDeck } from "@/components/poster-deck";
 import { SimulatedPoster, type BlockScore } from "@/components/simulated-poster";
+import { TiltFrame } from "@/components/tilt-frame";
 import { UploadScan } from "@/components/upload-scan";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -134,7 +137,9 @@ export function PosterLab({
     return out;
   }, [poster, size, profile, distanceM]);
 
-  const lostCount = Object.values(scores).filter((s) => s.verdict === "lost").length;
+  // Lines that still read (legible or borderline) at the current distance: the gauge's figure.
+  const readableCount = Object.values(scores).filter((s) => s.verdict !== "lost").length;
+  const landscape = (poster?.aspect ?? 1 / Math.SQRT2) > 1;
 
   // Shareable state: every setting lives in the URL, so a result has a link.
   useEffect(() => {
@@ -188,18 +193,16 @@ export function PosterLab({
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]">
           <Card className="flex min-w-0 flex-col overflow-hidden bg-surface">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 sm:px-5">
-              <p className="min-w-0 text-sm" aria-live="polite">
-                <strong>{poster.title}</strong> on {size} at {distanceM.toFixed(1)} m, {profile.label}:{" "}
-                {poster.blocks.length === 0 ? (
-                  <span className="font-semibold text-muted-foreground">no text lines to score</span>
-                ) : lostCount === 0 ? (
-                  <span className="font-semibold text-ok">every block reads</span>
-                ) : (
-                  <span className="font-semibold text-bad">
-                    {lostCount} of {poster.blocks.length} blocks lost
-                  </span>
-                )}
-              </p>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+                <LinesGauge readable={readableCount}
+                  total={poster.blocks.length}
+                  distanceM={distanceM}
+                  settleKey={`${poster.id}|${size}|${profile.id}`}
+                />
+                <p className="min-w-0 text-xs text-muted-foreground">
+                  <strong className="text-foreground">{poster.title}</strong> on {size}, {profile.label}
+                </p>
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="grid grid-cols-2 gap-1" role="group" aria-label="Stage">
                   <Button
@@ -247,16 +250,18 @@ export function PosterLab({
             ) : (
               <div
                 key="flat"
-                className="telora-enter flex h-[min(66vh,41rem)] min-h-[22rem] w-full max-w-full items-center justify-center p-4 pt-9 sm:min-h-[27.5rem] sm:p-6 sm:pt-9"
+                className="flex h-[min(58vh,38rem)] min-h-[22rem] w-full max-w-full items-center justify-center p-4 pt-8 sm:min-h-[26rem] sm:p-6 sm:pt-8 telora-enter [container-type:size]"
               >
-                <SimulatedPoster
-                  poster={poster}
-                  size={size}
-                  distanceM={distanceM}
-                  profile={profile}
-                  scores={scores}
-                  showVerdicts={showVerdicts}
-                />
+                <TiltFrame className={landscape ? "flex w-full items-center justify-center" : "h-full max-w-full"}>
+                  <SimulatedPoster
+                    poster={poster}
+                    size={size}
+                    distanceM={distanceM}
+                    profile={profile}
+                    scores={scores}
+                    showVerdicts={showVerdicts}
+                  />
+                </TiltFrame>
               </div>
             )}
             <p className="border-t border-border px-5 py-3 text-xs text-muted-foreground">
@@ -327,23 +332,25 @@ export function PosterLab({
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Block by block</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <p className="text-xs text-muted-foreground">{SOURCE_LINE[mode]}</p>
-                <BlockReport
-                  poster={poster}
-                  size={size}
-                  distanceM={distanceM}
-                  profile={profile}
-                  scores={scores}
-                  onOpenPoster={upload ? undefined : selectPoster}
-                />
-                <ReportDownload poster={poster} size={size} distanceM={distanceM} profile={profile} />
-              </CardContent>
-            </Card>
+            <Entrance className="min-w-0">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle>Block by block</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  <p className="text-xs text-muted-foreground">{SOURCE_LINE[mode]}</p>
+                  <BlockReport
+                    poster={poster}
+                    size={size}
+                    distanceM={distanceM}
+                    profile={profile}
+                    scores={scores}
+                    onOpenPoster={upload ? undefined : selectPoster}
+                  />
+                  <ReportDownload poster={poster} size={size} distanceM={distanceM} profile={profile} />
+                </CardContent>
+              </Card>
+            </Entrance>
 
             {uploadCard}
           </div>
