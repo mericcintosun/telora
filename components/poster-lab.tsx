@@ -9,7 +9,7 @@ import { UploadScan } from "@/components/upload-scan";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import { PAPER_SIZES, type PaperSize, type PosterRecord, type VisionProfile } from "@/lib/data";
+import { PAPER_SIZES, type AdapterMode, type PaperSize, type PosterRecord, type VisionProfile } from "@/lib/data";
 import { MAX_DISTANCE_M, MIN_DISTANCE_M, maxReadableDistanceM, verdictAt } from "@/lib/legibility";
 
 export interface LabState {
@@ -23,15 +23,23 @@ export interface LabState {
  * The whole tool: poster rail, simulated view, controls and per-block report.
  * Posters and profiles arrive as props from app/page.tsx, which reads them through
  * the adapter seam (lib/adapter). This component never imports the seed.
+ * `mode` is the adapter mode, so the report can say whether its OCR numbers are samples.
  */
+const SOURCE_LINE: Record<AdapterMode, string> = {
+  fake: "Sample data: the example posters carry sample OCR numbers. Upload your own poster for a live OCR check.",
+  real: "Live: your upload is read by Tesseract.js in this browser at 8 distances.",
+};
+
 export function PosterLab({
   initial,
   posters,
   profiles,
+  mode,
 }: {
   initial: LabState;
   posters: PosterRecord[];
   profiles: VisionProfile[];
+  mode: AdapterMode;
 }) {
   const [posterId, setPosterId] = useState(initial.posterId);
   const [upload, setUpload] = useState<PosterRecord | null>(null);
@@ -77,6 +85,8 @@ export function PosterLab({
 
   const uploadCard = (
     <UploadScan
+      size={size}
+      profile={profile}
       onScanned={(p) => {
         setUpload(p);
         setSize(p.intendedSize);
@@ -200,7 +210,8 @@ export function PosterLab({
               <CardHeader className="pb-3">
                 <CardTitle>Block by block</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-3">
+                <p className="text-xs text-muted-foreground">{SOURCE_LINE[mode]}</p>
                 <BlockReport poster={poster} size={size} distanceM={distanceM} profile={profile} scores={scores} />
               </CardContent>
             </Card>

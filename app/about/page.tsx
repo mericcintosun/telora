@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdapter } from "@/lib/adapter";
+import { OCR_PASS_RATIO } from "@/lib/config";
 import { BASE_THRESHOLD_ARCMIN, SCAN_DISTANCES_M, capHeightPt, formatMeters, maxReadableDistanceM } from "@/lib/legibility";
 
 export const metadata: Metadata = {
@@ -113,9 +114,10 @@ export default async function AboutPage() {
               <CardTitle className="text-base">Tesseract.js OCR</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Finds every text line on an uploaded poster, in a Web Worker in your browser. Next up: re-reading the
-              blurred poster at {SCAN_DISTANCES_M.length} distances ({SCAN_DISTANCES_M.join(", ")} m) to confirm each
-              verdict.
+              Finds every text line on an uploaded poster, in Web Workers in your browser. Then it re-reads the poster
+              blurred to {SCAN_DISTANCES_M.length} distances ({SCAN_DISTANCES_M.join(", ")} m). A line counts as read
+              while at least {Math.round(OCR_PASS_RATIO * 100)}% of its words still match. OCR reads like a machine, not a person, so it checks the
+              model rather than replacing it.
             </CardContent>
           </Card>
           <Card>

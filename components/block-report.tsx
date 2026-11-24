@@ -1,11 +1,51 @@
 import { Badge } from "@/components/ui/badge";
-import type { PaperSize, PosterRecord, VisionProfile } from "@/lib/data";
+import type { PaperSize, PosterBlock, PosterRecord, VisionProfile } from "@/lib/data";
+import { confirmationLine, ocrAgrees } from "@/lib/confirm";
 import { fixRecipe, formatMeters } from "@/lib/legibility";
 import type { BlockScore } from "@/components/simulated-poster";
 
 const VERDICT_LABEL = { legible: "Reads", borderline: "Borderline", lost: "Lost" } as const;
 
-/** One row per text block, weakest first: how far it reads and what fixes it. */
+/** The OCR line under a block: the comparison, or why it cannot be compared right now. */
+function OcrNote({
+  block,
+  size,
+  profile,
+  modelMaxM,
+}: {
+  block: PosterBlock;
+  size: PaperSize;
+  profile: VisionProfile;
+  modelMaxM: number;
+}) {
+  const ocr = block.ocr;
+  if (!ocr) return null;
+  const source = ocr.basis === "sample" ? "Sample OCR" : "OCR";
+  if (ocr.size !== size) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        {ocr.basis === "live"
+          ? `OCR was checked at ${ocr.size}; upload again to re-check at ${size}.`
+          : `Sample OCR was checked at ${ocr.size}; switch back to ${ocr.size} to compare.`}
+      </p>
+    );
+  }
+  if (ocr.profileId !== profile.id) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        {source} was checked for a different vision profile; switch back
+        {ocr.basis === "live" ? " or upload again" : ""} to compare.
+      </p>
+    );
+  }
+  const line = confirmationLine(block, modelMaxM);
+  if (!line) return null;
+  return (
+    <p className={`text-sm font-semibold ${ocrAgrees(ocr.maxDistanceM, modelMaxM) ? "text-ok" : "text-warn"}`}>{line}</p>
+  );
+}
+
+/** One row per text block, weakest first: how far it reads, what OCR says, and what fixes it. */
 export function BlockReport({
   poster,
   size,
@@ -56,6 +96,7 @@ export function BlockReport({
               )}
               {!recipe && "."}
             </p>
+            <OcrNote block={b} size={size} profile={profile} modelMaxM={score.maxDistanceM} />
           </li>
         );
       })}
