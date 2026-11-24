@@ -1,8 +1,8 @@
-// Real adapter, honestly: there is no poster backend. Real scanning happens in the
-// visitor's browser (lib/ocr.ts, Tesseract.js), and uploaded posters never reach a server.
-// So this adapter reads the same seed as the fake one. It exists so the interface is
-// exercised under ADAPTER_MODE=real, and it is the Phase 2 swap point if example posters
-// or OCR confirmation results ever come from somewhere other than lib/data/seed.ts.
+// Real adapter, honestly: there is no poster backend and no hosted model. The real OCR runs
+// in the visitor's browser (lib/ocr.ts, Tesseract.js) on uploads, and uploaded posters never
+// reach a server. So this adapter serves the seed posters with no `ocr` field: it never
+// invents OCR numbers. ADAPTER_MODE=real only decides whether seed posters show sample OCR
+// numbers (fake) or none (real); the upload path is live in both modes.
 
 import { POSTERS, VISION_PROFILES } from "@/lib/data/seed";
 import type { PosterAdapter } from "./types";

@@ -1,5 +1,6 @@
 // Picks the data source for pages and API routes. Server-side only (reads process.env).
-// ADAPTER_MODE=real selects lib/adapter/real.ts; anything else, or unset, selects "fake".
+// This is the only reader of ADAPTER_MODE. "real" selects lib/adapter/real.ts (seed posters,
+// no OCR numbers); anything else, or unset, selects "fake" (seed posters with sample OCR).
 
 import { fakeAdapter } from "./fake";
 import { realAdapter } from "./real";

@@ -51,7 +51,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
           </Button>
         </div>
 
-        <PosterLab initial={initial} posters={posters} profiles={profiles} />
+        <PosterLab initial={initial} posters={posters} profiles={profiles} mode={adapter.mode} />
       </div>
 
       <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
