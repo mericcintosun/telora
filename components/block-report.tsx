@@ -19,7 +19,13 @@ export function BlockReport({
   profile: VisionProfile;
   scores: Record<string, BlockScore>;
 }) {
-  const rows = [...poster.blocks].sort((a, b) => scores[a.id].maxDistanceM - scores[b.id].maxDistanceM);
+  if (poster.blocks.length === 0) {
+    return <p className="py-2 text-sm text-muted-foreground">No text lines found for this poster.</p>;
+  }
+
+  const rows = [...poster.blocks]
+    .filter((b) => scores[b.id])
+    .sort((a, b) => scores[a.id].maxDistanceM - scores[b.id].maxDistanceM);
 
   return (
     <ol className="divide-y divide-border">
