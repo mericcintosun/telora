@@ -15,6 +15,13 @@ const brandFiles = fs.existsSync(brandDir)
 
 const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_BRAND_FILES: brandFiles.join(",") },
+  // pdfjs-dist (PDF upload, lib/pdf.ts) has an optional Node-only `canvas` dependency.
+  // Telora renders PDFs in the browser only, so the bundler is told to skip it.
+  webpack: (config: { resolve?: { alias?: Record<string, unknown> } }) => {
+    config.resolve = config.resolve ?? {};
+    config.resolve.alias = { ...(config.resolve.alias ?? {}), canvas: false };
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -32,7 +32,9 @@ export const DEUTAN_MATRIX = [0.367322, 0.860646, -0.227968, 0.280085, 0.672501,
 
 /** Largest upload the scan accepts. */
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
-export const UPLOAD_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+export const UPLOAD_TYPES = ["image/png", "image/jpeg", "image/webp", "application/pdf"] as const;
+/** A PDF worker that fails to load gets exactly this many retries before upstream_error. */
+export const PDF_WORKER_RETRIES = 1;
 
 /** Prefix for every core-path log line. Logs carry ids, counts and durations only, never poster text. */
 export const CORE_LOG_PREFIX = "[core]";

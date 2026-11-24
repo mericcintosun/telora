@@ -29,6 +29,7 @@ import {
 import { assignWordsToBlocks, normalizeWords, ocrMaxDistanceM, wordMatchRatio, type PctWord } from "@/lib/confirm";
 import { CoreFailure, coreError, failWith, toCoreError, type CoreError } from "@/lib/errors";
 import { SCAN_DISTANCES_M, blurSigmaPx } from "@/lib/legibility";
+import { renderFirstPage } from "@/lib/pdf";
 import { UploadFileSchema } from "@/lib/schemas";
 import type { BlockOcr, PaperSize, PosterBlock, PosterRecord, ScanProgress, VisionProfile } from "@/lib/types";
 
@@ -153,6 +154,26 @@ async function startScheduler(T: TesseractApi, hooks: ProgressHooks): Promise<Sc
   for (const w of workers) scheduler.addWorker(w);
   log("ocr worker ready", { workers: workers.length, ms: since(t0) });
   return scheduler;
+}
+
+let warmUp: Promise<void> | null = null;
+
+/**
+ * Starts one Tesseract worker load, once per tab, with the usual timeout and one retry, then
+ * terminates it. The engine and English data land in the browser cache, so the first real
+ * upload does not wait on the download. Never rejects: a failed warm-up only means the first
+ * scan downloads the engine itself.
+ */
+export function warmOcrEngine(): Promise<void> {
+  if (!warmUp) {
+    const t0 = performance.now();
+    warmUp = loadTesseract()
+      .then((T) => loadWorker(T, { onRecognize: null }))
+      .then((worker) => worker.terminate())
+      .then(() => log("ocr warm", { ms: since(t0) }))
+      .catch(() => log("ocr warm skipped"));
+  }
+  return warmUp;
 }
 
 /** One recognize job through the scheduler, bounded by OCR_JOB_TIMEOUT_MS. */
@@ -386,10 +407,10 @@ export interface ScanResult {
   fromCache: boolean;
 }
 
-function uploadedPoster(file: File, url: string, blocks: PosterBlock[], aspect: number, size: PaperSize): PosterRecord {
+function uploadedPoster(name: string, url: string, blocks: PosterBlock[], aspect: number, size: PaperSize): PosterRecord {
   return {
     id: "uploaded",
-    title: file.name.replace(/\.[a-z0-9]+$/i, ""),
+    title: name.replace(/\.[a-z0-9]+$/i, ""),
     kind: "Club event",
     owner: "Your upload (stays in this browser)",
     hangingSpot: "Wherever you hang it",
@@ -403,35 +424,52 @@ function uploadedPoster(file: File, url: string, blocks: PosterBlock[], aspect: 
   };
 }
 
+export interface ScanOptions {
+  size: PaperSize;
+  profile: VisionProfile | undefined;
+}
+
+/** Options for the canvas entry point. `cacheKey` comes from the uploaded file's bytes. */
+export interface CanvasScanOptions extends ScanOptions {
+  /** scanCacheKey(file, size, profile): SHA-256 of the file plus size plus profile. Null disables caching. */
+  cacheKey?: string | null;
+  /** Preview image for the lab. When absent, a PNG object URL of the canvas is made. */
+  imageUrl?: string;
+}
+
+function isPdf(file: File): boolean {
+  return file.type === "application/pdf";
+}
+
+async function canvasObjectUrl(canvas: HTMLCanvasElement): Promise<string> {
+  const blob = await toPngBlob(canvas);
+  if (!blob) throw failWith("not_configured");
+  return URL.createObjectURL(blob);
+}
+
 /**
- * Scans an uploaded poster, then confirms every line at the 8 scan distances for the given
- * paper size and vision profile. Throws CoreFailure when the file is invalid, the engine
- * cannot load or no text is found. A failed confirmation does not throw: the poster comes
- * back with model distances only and `confirmError` set.
+ * Scans an uploaded poster (PNG, JPG, WebP or PDF), then confirms every line at the 8 scan
+ * distances for the given paper size and vision profile. A PDF goes through pdf.js
+ * (lib/pdf.ts, first page only) and then the same canvas path as an image.
+ * Throws CoreFailure when the file is invalid, an engine cannot load or no text is found.
+ * A failed confirmation does not throw: the poster comes back with model distances only
+ * and `confirmError` set.
  */
-export async function scanPosterImage(
-  file: File,
-  onProgress: (p: ScanProgress) => void,
-  opts: { size: PaperSize; profile: VisionProfile | undefined }
-): Promise<ScanResult> {
-  const t0 = performance.now();
+export async function scanPosterImage(file: File, onProgress: (p: ScanProgress) => void, opts: ScanOptions): Promise<ScanResult> {
   if (!UploadFileSchema.safeParse({ type: file.type, size: file.size }).success) throw failWith("invalid_input");
+  const key = opts.profile ? await scanCacheKey(file, opts.size, opts.profile.id).catch(() => null) : null;
+
+  if (isPdf(file)) {
+    onProgress({ stage: "Opening the PDF, first page only", progress: P.read });
+    const canvas = await renderFirstPage(file, OCR_LONG_EDGE_PX);
+    return scanPosterCanvas(canvas, file.name, onProgress, { ...opts, cacheKey: key });
+  }
 
   onProgress({ stage: "Reading the image", progress: P.read });
   const { img, url } = await loadImage(file);
-
   const scale = Math.min(1, OCR_LONG_EDGE_PX / Math.max(img.naturalWidth, img.naturalHeight));
-  const W = Math.round(img.naturalWidth * scale);
-  const H = Math.round(img.naturalHeight * scale);
-
-  const key = opts.profile ? await scanCacheKey(file, opts.size, opts.profile.id).catch(() => null) : null;
-  const cached = getCachedScan(key);
-  if (cached) {
-    log("cache hit", { blocks: cached.blocks.length, ms: since(t0) });
-    onProgress({ stage: "Done", progress: 1 });
-    return { poster: uploadedPoster(file, url, cached.blocks, cached.aspect, opts.size), blurMode: cached.blurMode, fromCache: true };
-  }
-
+  const W = Math.max(1, Math.round(img.naturalWidth * scale));
+  const H = Math.max(1, Math.round(img.naturalHeight * scale));
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -443,6 +481,38 @@ export async function scanPosterImage(
   ctx.fillStyle = "white";
   ctx.fillRect(0, 0, W, H);
   ctx.drawImage(img, 0, 0, W, H);
+  return scanPosterCanvas(canvas, file.name, onProgress, { ...opts, cacheKey: key, imageUrl: url });
+}
+
+/**
+ * The canvas entry point beside the File one: first pass, contrast, 8-distance confirmation.
+ * Shares the Tesseract scheduler, the confirmation and the tab cache with scanPosterImage.
+ * The canvas should already be scaled to at most OCR_LONG_EDGE_PX on its long edge.
+ */
+export async function scanPosterCanvas(
+  canvas: HTMLCanvasElement,
+  name: string,
+  onProgress: (p: ScanProgress) => void,
+  opts: CanvasScanOptions
+): Promise<ScanResult> {
+  const t0 = performance.now();
+  const W = canvas.width;
+  const H = canvas.height;
+  const key = opts.cacheKey ?? null;
+  const url = opts.imageUrl ?? (await canvasObjectUrl(canvas));
+
+  const cached = getCachedScan(key);
+  if (cached) {
+    log("cache hit", { blocks: cached.blocks.length, ms: since(t0) });
+    onProgress({ stage: "Done", progress: 1 });
+    return { poster: uploadedPoster(name, url, cached.blocks, cached.aspect, opts.size), blurMode: cached.blurMode, fromCache: true };
+  }
+
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    URL.revokeObjectURL(url);
+    throw failWith("not_configured");
+  }
   log("image ready", { width: W, height: H });
 
   onProgress({ stage: "Loading the OCR engine (about 4 MB, cached after the first run)", progress: P.engine });
@@ -489,20 +559,20 @@ export async function scanPosterImage(
 
     let result: ScanResult;
     if (!opts.profile) {
-      result = { poster: uploadedPoster(file, url, blocks, W / H, opts.size), confirmError: coreError("not_configured"), fromCache: false };
+      result = { poster: uploadedPoster(name, url, blocks, W / H, opts.size), confirmError: coreError("not_configured"), fromCache: false };
     } else {
       try {
         const confirmed = await confirmAtDistances(canvas, blocks, opts.size, opts.profile, onProgress, { scheduler });
         setCachedScan(key, { blocks: confirmed.blocks, aspect: W / H, blurMode: confirmed.blurMode });
         result = {
-          poster: uploadedPoster(file, url, confirmed.blocks, W / H, opts.size),
+          poster: uploadedPoster(name, url, confirmed.blocks, W / H, opts.size),
           blurMode: confirmed.blurMode,
           fromCache: false,
         };
       } catch (err) {
         const confirmError = toCoreError(err);
         log("confirm failed", { code: confirmError.error });
-        result = { poster: uploadedPoster(file, url, blocks, W / H, opts.size), confirmError, fromCache: false };
+        result = { poster: uploadedPoster(name, url, blocks, W / H, opts.size), confirmError, fromCache: false };
       }
     }
     onProgress({ stage: "Done", progress: 1 });

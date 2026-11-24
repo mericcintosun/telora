@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { SceneSlot } from "@/components/scene-slot";
 import { CoreFailure, scanErrorHint, type CoreErrorCode } from "@/lib/errors";
 import type { PaperSize, PosterRecord, VisionProfile } from "@/lib/data";
 import { SCAN_DISTANCES_M } from "@/lib/legibility";
-import { scanPosterImage, type BlurMode, type ScanProgress } from "@/lib/ocr";
+import { scanPosterImage, warmOcrEngine, type BlurMode, type ScanProgress } from "@/lib/ocr";
 import { UploadFileSchema } from "@/lib/schemas";
 
 type ScanState =
@@ -40,13 +40,29 @@ export function UploadScan({
 }) {
   const [state, setState] = useState<ScanState>({ kind: "idle" });
   const [inputKey, setInputKey] = useState(0);
+  // Write-path guard: a second drop while a scan runs is ignored, so two scans never start.
+  // The result is idempotent anyway, because the tab cache is keyed by the file's content hash.
+  const scanInFlight = useRef(false);
+
+  // Load the OCR engine once while the browser is idle, so the first upload skips the ~4 MB wait.
+  // A failure here is swallowed: the scan then loads the engine itself.
+  useEffect(() => {
+    const start = () => void warmOcrEngine();
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(start, { timeout: 4000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(start, 1500);
+    return () => window.clearTimeout(id);
+  }, []);
 
   async function handleFile(file: File | undefined) {
-    if (!file) return;
+    if (!file || scanInFlight.current) return;
     if (!UploadFileSchema.safeParse({ type: file.type, size: file.size }).success) {
       setState({ kind: "error", code: "invalid_input" });
       return;
     }
+    scanInFlight.current = true;
     setState({ kind: "scanning", fileName: file.name, progress: { stage: "Starting", progress: 0 } });
     try {
       const result = await scanPosterImage(
@@ -66,6 +82,8 @@ export function UploadScan({
       onScanned(result.poster);
     } catch (err) {
       setState({ kind: "error", code: err instanceof CoreFailure ? err.core.error : "upstream_error" });
+    } finally {
+      scanInFlight.current = false;
     }
   }
 
@@ -74,7 +92,8 @@ export function UploadScan({
       <CardHeader>
         <CardTitle>Check your own poster</CardTitle>
         <CardDescription>
-          The scan runs in this browser with Tesseract.js. Your file never leaves the page.
+          PNG, JPG, WebP or PDF (first page). The scan runs in this browser with Tesseract.js, and PDFs open with
+          pdf.js. Your file never leaves the page.
         </CardDescription>
         <CardDescription>
           It then re-reads the poster blurred to {SCAN_DISTANCES_M.length} distances. The OCR is a machine reader, so it
@@ -95,8 +114,8 @@ export function UploadScan({
         <Input
           key={inputKey}
           type="file"
-          accept="image/png,image/jpeg,image/webp"
-          aria-label="Poster image"
+          accept="image/png,image/jpeg,image/webp,application/pdf"
+          aria-label="Poster image or PDF"
           disabled={state.kind === "scanning"}
           onChange={(e) => handleFile(e.target.files?.[0])}
         />

@@ -13,10 +13,10 @@ export interface CoreError {
 const MAX_MB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
 
 const HINTS: Record<CoreErrorCode, string> = {
-  invalid_input: `Telora reads PNG, JPG and WebP files up to ${MAX_MB} MB, so export the first page of a PDF as PNG.`,
+  invalid_input: `Telora reads PNG, JPG, WebP and PDF files up to ${MAX_MB} MB, and only the first page of a PDF.`,
   upstream_timeout: "The OCR engine took too long to load or read, so check your connection and try again.",
-  upstream_error: "The OCR engine could not run in this browser, so check your connection and try again.",
-  parse_failure: "No readable text was found, so try a flatter PNG export at 150 dpi or more, or a sharper photo.",
+  upstream_error: "The OCR or PDF engine could not run in this browser, so check your connection and try again.",
+  parse_failure: "No readable text was found, or the PDF is damaged or password protected, so try a flat PNG or PDF export.",
   not_configured: "This browser is missing a feature the scan needs, so try a current Chrome, Firefox or Safari.",
 };
 

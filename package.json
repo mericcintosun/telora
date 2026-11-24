@@ -8,7 +8,8 @@
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
     "test": "tsx --test tests/*.test.ts",
-    "proof": "tsx scripts/proof.ts"
+    "proof": "tsx scripts/proof.ts",
+    "demo:reset": "tsx scripts/demo-reset.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",
@@ -18,6 +19,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "next": "^15.4.5",
+    "pdfjs-dist": "^5.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^3.0.1",
