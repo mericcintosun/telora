@@ -6,6 +6,8 @@ import { POSTERS, VISION_PROFILES } from "@/lib/data/seed";
 import type { PosterRecord } from "@/lib/types";
 import type { PosterAdapter } from "./types";
 
+/** Attaches a sample only where one was written by hand. Blocks without one (the corrected
+ *  Robot Sumo Night poster, ids rsf-*) stay without `ocr`, so no number is ever invented. */
 function withSampleOcr(poster: PosterRecord): PosterRecord {
   return {
     ...poster,

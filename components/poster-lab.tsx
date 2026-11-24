@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { BlockReport } from "@/components/block-report";
+import { LabEmptyState } from "@/components/lab-states";
 import { PosterDeck } from "@/components/poster-deck";
 import { SimulatedPoster, type BlockScore } from "@/components/simulated-poster";
 import { UploadScan } from "@/components/upload-scan";
@@ -98,15 +99,14 @@ export function PosterLab({
 
   return (
     <section id="lab" aria-label="Poster legibility lab" className="flex flex-col gap-4">
-      <PosterDeck posters={posters} activeId={upload ? "" : posterId} onSelect={selectPoster} profile={baseline} />
+      {posters.length > 0 && baseline && (
+        <PosterDeck posters={posters} activeId={upload ? "" : posterId} onSelect={selectPoster} profile={baseline} />
+      )}
 
+      {/* Empty state: no seed posters (posters.length === 0) and nothing uploaded yet. */}
       {!poster || !profile ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]">
-          <Card className="flex min-h-[18rem] items-center justify-center bg-surface p-6 text-center">
-            <p className="max-w-[40ch] text-sm text-muted-foreground">
-              Nothing to simulate yet. Upload a poster image and Telora will score every line it finds.
-            </p>
-          </Card>
+          <LabEmptyState />
           {uploadCard}
         </div>
       ) : (
@@ -212,7 +212,14 @@ export function PosterLab({
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 <p className="text-xs text-muted-foreground">{SOURCE_LINE[mode]}</p>
-                <BlockReport poster={poster} size={size} distanceM={distanceM} profile={profile} scores={scores} />
+                <BlockReport
+                  poster={poster}
+                  size={size}
+                  distanceM={distanceM}
+                  profile={profile}
+                  scores={scores}
+                  onOpenPoster={upload ? undefined : selectPoster}
+                />
               </CardContent>
             </Card>
 

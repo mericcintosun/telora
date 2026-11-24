@@ -34,12 +34,41 @@ export const POSTERS: PosterRecord[] = [
     intendedDistanceM: 4,
     background: "ground",
     updated: "2026-11-21",
+    correctedId: "robot-sumo-night-fixed",
     blocks: [
       { id: "rs-title", label: "Headline", role: "title", text: "ROBOT SUMO NIGHT", x: 8, y: 9, w: 84, capHeightPct: 3.53, weight: 900, align: "left", tone: "ink", ...INK_ON_GROUND },
       { id: "rs-date", label: "Event date", role: "date", text: "Thursday 3 December, 18:30", x: 8, y: 30, w: 70, capHeightPct: 0.94, weight: 700, align: "left", tone: "ink", ...INK_ON_GROUND },
       { id: "rs-venue", label: "Venue", role: "venue", text: "Lab Z-14, Engineering Block", x: 8, y: 36, w: 70, capHeightPct: 0.8, weight: 500, align: "left", tone: "accent", ...ACCENT_ON_GROUND },
       { id: "rs-body", label: "Pitch", role: "body", text: "Bring a bot under 3 kg or come cheer for one. Pizza after the final round.", x: 8, y: 52, w: 62, capHeightPct: 0.6, weight: 400, align: "left", tone: "ink", ...INK_ON_GROUND },
       { id: "rs-qr", label: "QR caption", role: "caption", text: "Scan to RSVP, 40 seats", x: 62, y: 88, w: 30, capHeightPct: 0.43, weight: 500, align: "left", tone: "ink", ...INK_ON_GROUND },
+    ],
+  },
+  // DEMO step 6: Robot Sumo Night with every lost line enlarged so it reads green at 4 m on A2
+  // for 20/20. Hand-computed with lib/legibility.ts (tan 8 arcmin = 0.0023271, A2 is 594 mm tall):
+  // green needs max distance >= 4 / 0.85 = 4.71 m, so every block targets about 4.9 m.
+  //   date   0.94 -> 1.95 (2.1x; the recipe's 1.7x reaches exactly 4.0 m, which is amber) = 4.98 m
+  //   venue  0.80 -> 2.40 (accent on ground, contrast 5.0, threshold 9.79 arcmin)       = 5.01 m
+  //   pitch  0.60 -> 1.95                                                                = 4.98 m
+  //   QR     0.43 -> 1.95                                                                = 4.98 m
+  //   title  3.53 unchanged                                                              = 9.01 m
+  // The y values are re-spaced so the larger lines and their verdict chips do not overlap.
+  {
+    id: "robot-sumo-night-fixed",
+    title: "Robot Sumo Night, corrected",
+    kind: "Club event",
+    owner: "Robotics Society",
+    hangingSpot: "Engineering block, ground-floor corridor",
+    intendedSize: "A2",
+    intendedDistanceM: 4,
+    background: "ground",
+    updated: "2026-11-24",
+    fixOf: "robot-sumo-night",
+    blocks: [
+      { id: "rsf-title", label: "Headline", role: "title", text: "ROBOT SUMO NIGHT", x: 8, y: 7, w: 84, capHeightPct: 3.53, weight: 900, align: "left", tone: "ink", ...INK_ON_GROUND },
+      { id: "rsf-date", label: "Event date", role: "date", text: "Thursday 3 December, 18:30", x: 8, y: 25, w: 84, capHeightPct: 1.95, weight: 700, align: "left", tone: "ink", ...INK_ON_GROUND },
+      { id: "rsf-venue", label: "Venue", role: "venue", text: "Lab Z-14, Engineering Block", x: 8, y: 34, w: 84, capHeightPct: 2.4, weight: 500, align: "left", tone: "accent", ...ACCENT_ON_GROUND },
+      { id: "rsf-body", label: "Pitch", role: "body", text: "Bring a bot under 3 kg or come cheer for one. Pizza after the final round.", x: 8, y: 49, w: 84, capHeightPct: 1.95, weight: 400, align: "left", tone: "ink", ...INK_ON_GROUND },
+      { id: "rsf-qr", label: "QR caption", role: "caption", text: "Scan to RSVP, 40 seats", x: 40, y: 81, w: 52, capHeightPct: 1.95, weight: 500, align: "left", tone: "ink", ...INK_ON_GROUND },
     ],
   },
   {

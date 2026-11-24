@@ -31,8 +31,8 @@ function usePrefersReducedMotion(): boolean {
  * Prev/next buttons and plain clicks do the same for keyboard and pointer users.
  */
 export function PosterDeck({
-  posters,
-  activeId,
+  posters: allPosters,
+  activeId: requestedActiveId,
   onSelect,
   profile,
 }: {
@@ -42,6 +42,10 @@ export function PosterDeck({
   /** Profile used for the "N blocks lost at the spot" line on each card (20/20 baseline). */
   profile: VisionProfile;
 }) {
+  // Corrected variants (fixOf set) stay off the rail; they open from the report. While one is
+  // open, its original stays highlighted so the rail still shows where you are.
+  const posters = allPosters.filter((p) => !p.fixOf);
+  const activeId = allPosters.find((p) => p.id === requestedActiveId)?.fixOf ?? requestedActiveId;
   const reduced = usePrefersReducedMotion();
   const viewportRef = useRef<HTMLDivElement>(null);
   const draggedRef = useRef(false);

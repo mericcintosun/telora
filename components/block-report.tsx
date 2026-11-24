@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { PaperSize, PosterBlock, PosterRecord, VisionProfile } from "@/lib/data";
 import { confirmationLine, ocrAgrees } from "@/lib/confirm";
 import { fixRecipe, formatMeters } from "@/lib/legibility";
@@ -52,12 +53,15 @@ export function BlockReport({
   distanceM,
   profile,
   scores,
+  onOpenPoster,
 }: {
   poster: PosterRecord;
   size: PaperSize;
   distanceM: number;
   profile: VisionProfile;
   scores: Record<string, BlockScore>;
+  /** Opens another seed poster in the lab (goes through the lab's URL sync). */
+  onOpenPoster?: (id: string) => void;
 }) {
   if (poster.blocks.length === 0) {
     return <p className="py-2 text-sm text-muted-foreground">No text lines found for this poster.</p>;
@@ -67,7 +71,31 @@ export function BlockReport({
     .filter((b) => scores[b.id])
     .sort((a, b) => scores[a.id].maxDistanceM - scores[b.id].maxDistanceM);
 
+  const variantLink =
+    onOpenPoster && poster.correctedId
+      ? {
+          id: poster.correctedId,
+          note: `A corrected version enlarges every lost line until it reads at ${poster.intendedDistanceM.toFixed(1)} m.`,
+          label: "Open the corrected poster",
+        }
+      : onOpenPoster && poster.fixOf
+        ? {
+            id: poster.fixOf,
+            note: "This is the corrected version, with every lost line enlarged.",
+            label: "Back to the original",
+          }
+        : null;
+
   return (
+    <>
+    {variantLink && onOpenPoster && (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface p-3">
+        <p className="text-sm">{variantLink.note}</p>
+        <Button size="sm" variant={poster.correctedId ? "default" : "outline"} onClick={() => onOpenPoster(variantLink.id)}>
+          {variantLink.label}
+        </Button>
+      </div>
+    )}
     <ol className="divide-y divide-border">
       {rows.map((b) => {
         const score = scores[b.id];
@@ -101,5 +129,6 @@ export function BlockReport({
         );
       })}
     </ol>
+    </>
   );
 }

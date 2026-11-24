@@ -92,15 +92,22 @@ test("BlockOcrSchema accepts a valid result and rejects an invalid one", () => {
   assert.equal(BlockOcrSchema.safeParse({ ...ocr(2), matchByDistance: [1, 1] }).success, false);
 });
 
-test("UploadFileSchema accepts a PNG and rejects a PDF", () => {
+test("UploadFileSchema accepts a PNG and a PDF, rejects other types", () => {
   assert.equal(UploadFileSchema.safeParse({ type: "image/png", size: 200_000 }).success, true);
-  assert.equal(UploadFileSchema.safeParse({ type: "application/pdf", size: 200_000 }).success, false);
+  assert.equal(UploadFileSchema.safeParse({ type: "application/pdf", size: 200_000 }).success, true);
+  assert.equal(UploadFileSchema.safeParse({ type: "application/zip", size: 200_000 }).success, false);
 });
 
-test("sample OCR table covers every seed block and stays consistent", () => {
-  const ids = POSTERS.flatMap((p) => p.blocks.map((b) => b.id));
-  assert.equal(POSTERS.length, 4);
+test("sample OCR table covers every original seed block and stays consistent", () => {
+  // The corrected variant (fixOf set) has no hand-written samples on purpose.
+  assert.equal(POSTERS.length, 5);
+  const originals = POSTERS.filter((p) => !p.fixOf);
+  assert.equal(originals.length, 4);
+  const ids = originals.flatMap((p) => p.blocks.map((b) => b.id));
   assert.equal(ids.length, 19);
+  for (const p of POSTERS.filter((x) => x.fixOf)) {
+    for (const b of p.blocks) assert.equal(OCR_SAMPLES[b.id], undefined, `${b.id} must not carry a sample`);
+  }
   for (const id of ids) {
     const s = OCR_SAMPLES[id];
     assert.ok(s, `missing sample for ${id}`);
