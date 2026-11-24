@@ -1,16 +1,35 @@
 # Telora
 
-Upload your poster and say where it will hang. Telora shows which line of text stops reading from across the hallway, and at exactly how many metres it disappears.
+Upload your poster and say where it will hang: Telora shows which line of text stops reading from across the hallway, and at exactly how many metres it disappears. Posters get designed 40 cm from a laptop and read from 3 to 5 metres down a corridor, so the date and the room vanish first and nobody finds out until the print is paid for.
 
-> Live demo: https://telora.vercel.app
+**Live:** https://telora.vercel.app (open it and drag the "Viewing distance" slider: that is DEMO step 3).
 
-## The problem
+The live URL runs the real in-browser OCR on posters you upload; the seeded example posters show hand-written sample OCR numbers, labelled "Sample OCR" in the report.
 
-Club nights, science fair boards, conference posters: they all get designed about 40 cm from a laptop screen, zoomed in. Then they get read from 3 to 5 metres down a corridor.
+## Try it in 60 seconds
 
-The help that exists is a static table. NC State and Knight ADRC publish point sizes against viewing distances, and Better Posters suggests printing a small copy and holding it at arm's length. None of them looks at your file. So the most important lines (the date, the room, the text under the QR code) are the first to vanish, and you find out after paying for the print.
+1. Open https://telora.vercel.app. Robot Sumo Night is already loaded on A2 at 4 m.
+2. Drag "Viewing distance" from 1 m to 6 m. The poster blurs, the gauge swings to "N of 5 lines readable", and the event date chip reads "Event date: 2.4 m max".
+3. Switch "Who is looking" to 20/40, then to Deuteranopia.
+4. In "Block by block", click "Open the corrected poster": every line is green at 4 m.
+5. Click "Corridor" above the poster to see it hang on a hallway wall.
+6. Drop your own PNG, JPG, WebP or PDF in "Check your own poster" and press "Download PNG report".
 
-## The solution
+## How it fits together
+
+```mermaid
+flowchart LR
+  seed["lib/data/seed.ts<br/>example posters and profiles"] --> adapter["lib/adapter/index.ts<br/>getLabData()"]
+  adapter --> page["app/page.tsx<br/>/ route"]
+  page --> lab["components/poster-lab.tsx<br/>the lab"]
+  lab --> legibility["lib/legibility.ts<br/>distance model and blur"]
+  lab --> ocr["lib/ocr.ts<br/>Tesseract.js scan"]
+  ocr --> pdf["lib/pdf.ts<br/>PDF first page"]
+  lab --> report["lib/report.ts<br/>PNG report"]
+  report --> legibility
+```
+
+## What it does
 
 Pick a poster, a paper size (A3 to A0) and a viewing distance. Telora:
 
@@ -19,59 +38,34 @@ Pick a poster, a paper size (A3 to A0) and a viewing distance. Telora:
 3. Compares it with an 8 arcminute threshold for 20/20 vision, raised for weaker eyesight and for low-contrast color pairs.
 4. Blurs the live preview to the eye's resolution limit at that distance, and outlines each block in green, amber or red.
 
-Every block gets a line like "Event date: 2.4 m max" and a fix: "enlarge it 1.7x, from 23 pt to 38 pt". When size cannot help (red text on green for someone with deuteranopia), it says to change the color pair instead.
+Every block gets a line like "Event date: 2.4 m max" and a fix: "enlarge it 1.7x". When size cannot help (red text on green for someone with deuteranopia), it says to change the color pair instead.
 
-Drag the distance slider from 1 m to 6 m and you watch the poster blur and the lines turn red one by one.
-
-Upload your own poster (PNG, JPG, WebP, or the first page of a PDF) and Telora also re-reads it with OCR at 8 distances, so each line gets a second opinion: "OCR: 2.0 m, model: 2.4 m".
-
-On the club poster, "Open the corrected poster" in the report loads a version with every lost line enlarged, and it reads green at 4 m.
-
-Click "Corridor" above the poster and the same poster hangs small on a hallway wall, as tall as it looks from where you stand, with the lost lines outlined in red. "Download PNG report" saves the poster at that distance with every line's distance and fix as one image.
+Upload your own poster and Telora also re-reads it with OCR at 8 distances, so each line gets a second opinion: "OCR: 2.0 m, model: 2.4 m".
 
 ## What works
 
 - The example posters load on `/` with no click, from the seed through one adapter, with a fallback chain (active adapter, then fake adapter, then the seed constants) in `getLabData` (`lib/adapter/index.ts`).
 - Live blur preview, verdict outlines, per-line distances and fix recipes, for four vision profiles and four paper sizes.
+- A spring gauge for "N of M lines readable" that swings past the new value and settles when the distance, poster, size or profile changes (`components/lines-gauge.tsx`).
+- A throwable poster rail (`components/poster-deck.tsx`) with previous and next buttons, and a small pointer tilt on the simulated poster with a mouse (`components/tilt-frame.tsx`). Both stand still under reduced motion.
 - The corrected Robot Sumo Night poster (DEMO step 6), opened from the report and back again.
 - Upload scan of PNG, JPG, WebP and PDF (first page through pdfjs-dist), with the 8-distance OCR confirmation, in the browser.
-- Every setting lives in the URL. Bad URL params fall back to defaults without an error (zod, `LabParamsSchema`).
+- Corridor view (`?view=corridor`): the poster on a hallway wall, sized by the visual angle of the printed sheet.
+- PNG report (`renderReportPng` in `lib/report.ts`), drawn on a canvas in the tab.
+- Every setting lives in the URL (`?poster=`, `?size=`, `?d=`, `?profile=`, `?view=`). Bad params fall back to defaults.
 - Loading, error and empty states for the lab (`components/lab-states.tsx`).
-- Corridor view (DEMO step 8, `components/corridor-view.tsx`): the poster on a hallway wall, sized by the visual angle of the printed sheet at the chosen distance (`apparentHeightShare` in `lib/legibility.ts`), outlined with the same verdicts, with "N of M lines readable at D m." under it. `?view=corridor` keeps it in the link.
-- PNG report (`renderReportPng` in `lib/report.ts`): drawn on a canvas in the browser from the CSS color tokens, downloaded through an object URL that is revoked afterwards. No server route.
-- Every control on the demo path has a 44 px touch target, and the header fits a 360 px screen (short labels below the `sm` breakpoint).
-
-## How it uses its tech
-
-There is no sponsor SDK in this hackathon. The technical core is:
-
-- **Tesseract.js** scans an uploaded PNG, JPG or WebP in Web Workers and returns every text line with its bounding box. The line height becomes the letter height the model scores. It then re-reads the poster blurred to 8 distances to confirm the model (see below). The engine starts loading while the page is idle, so the first upload does not wait on the download.
-- **pdfjs-dist** (pdf.js) renders the first page of an uploaded PDF to a canvas at a 1600 px long edge, in the browser (`lib/pdf.ts`). That canvas then takes the same scan path as an image. It is loaded only when a PDF is dropped.
-- **zod** checks the uploaded file (type and size) before any scan logic runs, validates the OCR result shape, the URL params on `/` and the `?id=` on the two API routes.
-- **Canvas 2D** measures luminance contrast inside each line box, once as-is and once after the **Machado 2009 deuteranopia matrix**.
-- **CSS filters** apply the distance blur, a contrast cut for the low-contrast profile, and an SVG `feColorMatrix` with the same Machado matrix for the deuteranopia preview.
-- **react-spring and @use-gesture** drive the poster rail: throw it and the release velocity decides which example loads. A react-spring `useSpring` also settles the poster's size in the corridor view when the distance changes.
-- **Canvas 2D** draws the PNG report in the tab, with the same blur and verdict colors as the live preview.
-
-The scan and the model run in the browser. No key, and your poster is never uploaded. The OCR engine's worker, WebAssembly core and English language data download from jsDelivr (`cdn.jsdelivr.net`, the Tesseract.js default, named as `OCR_ASSET_HOST` in `lib/config.ts`); the pdf.js worker is served from this site. See `SECURITY.md`. The example posters and vision profiles come from a seed module through one adapter (`lib/adapter`), which the pages and two read-only JSON routes (`/api/posters`, `/api/profiles`) share.
 
 ## How the OCR confirmation works
 
 The distance model is geometry. The OCR confirmation is a second, independent signal from an actual reader. It runs only on posters you upload, in your browser (`lib/ocr.ts`, pure logic in `lib/confirm.ts`).
 
 1. **First pass.** Tesseract.js finds the text lines on the sharp poster (long edge scaled to 1600 px).
-2. **8 distances.** For each of 1, 1.5, 2, 3, 4, 5, 7 and 10 m, the poster is blurred with the same Gaussian sigma the live preview uses at that distance (`blurSigmaPx` in `lib/legibility.ts`) for your paper size and vision profile.
-3. **Re-read.** A Tesseract scheduler with 2 workers reads the 8 blurred copies in parallel. Each recognized word is assigned to the line whose box contains its center.
-4. **The 60% word rule.** A line counts as readable at a distance while at least 60% of its words still match (multiset match, lowercase, punctuation stripped). Its OCR distance is the farthest distance where it and every closer distance pass. 0 means it was already lost at 1 m.
+2. **8 distances.** For each of 1, 1.5, 2, 3, 4, 5, 7 and 10 m, the poster is blurred with the same Gaussian sigma the live preview uses at that distance.
+3. **Re-read.** A Tesseract scheduler with 2 workers reads the 8 blurred copies. Each word is assigned to the line whose box contains its center.
+4. **The 60% word rule.** A line counts as readable at a distance while at least 60% of its words still match. Its OCR distance is the farthest distance where it and every closer distance pass.
 5. **Report.** Each line reads "OCR: 2.0 m, model: 2.4 m", green when OCR reaches at least 85% of the model distance, amber otherwise.
 
-**A machine reader, not a person.** Tesseract gives up on blur earlier than a human who knows what a date looks like, and it can read some low-contrast pairs a person struggles with. The OCR number confirms the model; it does not replace it.
-
-**Safari blur fallback.** Browsers without `CanvasRenderingContext2D.filter` (Safari) get a downscale then upscale blur of a similar strength instead of a true Gaussian. The upload card says so when that happens.
-
-**Limits.** Each worker load has a timeout and exactly one retry, each read has its own timeout. If the confirmation fails, the poster still shows its model distances and the card shows a one-sentence reason. Results are cached in memory for the tab, keyed by the SHA-256 of the file plus paper size and profile, so the same file reads identically the second time.
-
-**Example posters.** With `ADAPTER_MODE=fake` (the default) the four example posters carry hand-written sample OCR numbers (`lib/data/ocr-samples.ts`), labelled "Sample OCR" in the report. With `ADAPTER_MODE=real` they carry none. The corrected club poster carries none in either mode. Uploads always get the live check.
+Tesseract gives up on blur earlier than a person who knows what a date looks like, so the OCR number confirms the model; it does not replace it. With `ADAPTER_MODE=fake` (the default) the four example posters carry hand-written sample OCR numbers (`lib/data/ocr-samples.ts`), labelled "Sample OCR". With `ADAPTER_MODE=real` they carry none.
 
 <!-- PROOF:BEGIN ocr -->
 Not run in this build: the 8-distance OCR needs a browser and this runner has none.
@@ -79,7 +73,7 @@ Not run in this build: the 8-distance OCR needs a browser and this runner has no
 
 ## The corrected poster
 
-Robot Sumo Night is lost at 4 m on A2: the date reads to 2.4 m, the venue to 1.7 m, the QR caption to 1.1 m. The report's fix recipe says "enlarge it 1.7x" for the date, which brings it to exactly 4.0 m. Exactly 4.0 m is still amber (borderline), because green needs 15% to spare. So the corrected version (`robot-sumo-night-fixed` in `lib/data/seed.ts`) enlarges the date 2.1x and every other lost line until it reads to about 5 m, and moves lines down so nothing overlaps. `tests/corrected.test.ts` checks every block is green at 4 m for 20/20.
+Robot Sumo Night is lost at 4 m on A2. The fix recipe says "enlarge it 1.7x" for the date, which reaches exactly 4.0 m, still amber because green needs 15% to spare. So the corrected version (`robot-sumo-night-fixed` in `lib/data/seed.ts`) enlarges the date 2.1x and every other lost line until it reads to about 5 m.
 
 <!-- PROOF:BEGIN corrected -->
 "Robot Sumo Night, corrected", computed with `lib/legibility.ts` by `npm run proof`.
@@ -93,9 +87,9 @@ Robot Sumo Night is lost at 4 m on A2: the date reads to 2.4 m, the venue to 1.7
 | QR caption | 1.1 m | 5.0 m (4.98 m) | legible |
 <!-- PROOF:END corrected -->
 
-## What we learned
+## What I learned
 
-- The NC State anchor of 20 pt readable to about 7 ft lines up with an 8 arcmin cap height threshold almost exactly (20 pt capitals are about 4.9 mm, which covers 7.96 arcmin at 2.13 m). That one number calibrates the whole model.
+- The NC State anchor of 20 pt readable to about 7 ft lines up with an 8 arcmin cap height threshold almost exactly. That one number calibrates the whole model.
 
 <!-- PROOF:BEGIN calibration -->
 Computed with `lib/legibility.ts` by `npm run proof`.
@@ -107,88 +101,68 @@ Computed with `lib/legibility.ts` by `npm run proof`.
 | A1 | 4.9 mm | 2.1 m (2.12 m) | about 7 ft (2.13 m) |
 | A0 | 4.9 mm | 2.1 m (2.12 m) | about 7 ft (2.13 m) |
 <!-- PROOF:END calibration -->
-- A Gaussian blur is a simplification of the eye's contrast sensitivity curve. Lighting, glare and viewing angle are ignored. The numbers are most useful as a ranking: if the date lasts 2.4 m and the title 9 m, the date is your problem.
-- Contrast matters more than we expected. Peach text on a light background loses about half its reading distance compared with dark ink at the same size.
 
-## Tech stack
+- A Gaussian blur is a stand-in for the eye's contrast sensitivity function. Lighting, glare and viewing angle are ignored, so the numbers work best as a ranking: if the date lasts 2.4 m and the title 9 m, the date is your problem.
+- The calibration rests on one table (NC State); it is a sanity check, not a study with real readers.
+- The deuteranopia filter shows in the live lab but is not drawn into the PNG report. The report's distances already include it, and the report footer says so.
+- Contrast matters more than expected: peach text on a light ground loses about half its reading distance against dark ink at the same size.
 
-- Next.js 15 (App Router), React 19, TypeScript strict, Tailwind CSS v4, shadcn-style primitives (Radix Slot, class-variance-authority, clsx, tailwind-merge)
-- Tesseract.js 6 (in-browser OCR)
-- pdfjs-dist 5 (first page of an uploaded PDF, in the browser)
-- zod 3 (upload, OCR result, URL param and API id validation)
-- @react-spring/web 10 and @use-gesture/react 10
-- lucide-react icons
-- Red Hat Display and Red Hat Text via next/font
-- tsx (dev only, runs `npm run seed`, `npm test` and `npm run proof`)
-- Deployed on Vercel with the standard Next build
+## Stack
+
+Next.js 15 (App Router), React 19, TypeScript 5, Tailwind CSS 4, tesseract.js 6, pdfjs-dist 5, zod 3, @react-spring/web 10, @use-gesture/react 10, lucide-react 0.474, @radix-ui/react-slot 1, class-variance-authority 0.7, clsx 2, tailwind-merge 3, tsx 4 (dev only). Red Hat Display and Red Hat Text through `next/font/google`. Deployed on Vercel with the standard Next build.
 
 ## Quickstart
 
 ```bash
 npm install
 npm run dev
-# open http://localhost:3000
+npm test
+npm run proof
 ```
 
-No secrets are needed. `.env.example` lists one optional key, `ADAPTER_MODE` (`fake` by default: example posters show sample OCR numbers; `real`: they show none). `npm run seed` writes the seed to `fixtures/seed-snapshot.json`.
-
-### Resetting the demo
-
-```bash
-npm run demo:reset   # rewrites fixtures/seed-snapshot.json twice, checks the bytes match, prints the clean demo URL
-```
-
-There is no database, no server store and no chain, so there is no migration command and nothing to wipe. The whole system state is the seed constants in `lib/data/seed.ts`, the URL search params, and the tab's in-memory scan cache (`lib/cache.ts`). Uploads never leave the browser. Reloading the page resets the tab; opening `/?poster=robot-sumo-night&size=A2&d=4.0&profile=2020` gives the clean demo start.
-
-Where things live: types in `lib/types.ts`, the four example posters and the corrected club poster in `lib/data/seed.ts`, their sample OCR numbers in `lib/data/ocr-samples.ts`, the adapter in `lib/adapter/`, the distance model in `lib/legibility.ts`, the OCR scan and 8-distance confirmation in `lib/ocr.ts`, its pure logic in `lib/confirm.ts`, constants in `lib/config.ts`.
-
-## Tests
-
-```bash
-npm test        # node:test through tsx: word matching, OCR distance rule, wording, zod schemas, sample table, corrected poster
-npm run proof   # runs the tests and the calibration, rewrites the PROOF blocks in this README, always exits 0
-```
+Then open http://localhost:3000. No secrets are needed; `.env.example` lists one optional key, `ADAPTER_MODE`. `npm run demo:reset` rewrites the seed snapshot and prints the clean demo URL.
 
 <!-- PROOF:BEGIN tests -->
 Tests: 16 passed, 0 failed (2 files, node:test through tsx, written by `npm run proof`).
 <!-- PROOF:END tests -->
 
-## Built during IdeaLab Hacks
+## Deployed addresses
 
-Before the event: nothing but a generic Next.js starter template (layout, Tailwind setup, empty button/card/badge/input primitives).
+| What | Address |
+| --- | --- |
+| Live URL | https://telora.vercel.app |
 
-During the event: everything in this repository's commit history, starting with the scaffold commits. That covers the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the 8-distance OCR confirmation, PDF upload through pdfjs-dist, the corrected club poster, the corridor view, the PNG report, the throwable poster rail, the adapter with its fallback chain and API routes, the loading, error and empty states, the demo reset script, the tests and proof script, every illustration and all copy.
+Plain web app: no contracts, no chain, no wallet. See `SECURITY.md`.
 
-## Not built yet
+## Built during the event vs before
 
-None of these run today:
-
-- A spring gauge on the lost-line count and a pointer tilt on the poster.
-- The deuteranopia color filter inside the PNG report (the live lab shows it; the report's distances already include it).
+IdeaLab Hacks ran from 4 to 30 November 2026. This repository was built for the event. The only starting point was a generic Next.js starter (layout, Tailwind setup, empty button, card, badge and input primitives); everything else in the commit history was written during the event: the distance model, the seed posters, the live preview, the vision profiles, the report and fix recipes, the OCR scan and 8-distance confirmation, PDF upload, the corrected poster, the corridor view, the PNG report, the poster rail, the lines gauge, the poster tilt, the adapter and API routes, the tests, the proof script, the illustrations and all copy.
 
 ## Prize tracks
 
-IdeaLab Hacks has four main placement rows. All four are automatic (the one Devpost submission enters every row), non-cash, with no sponsor and no required technology. There is no sponsor bounty row, so no bounty table applies to this project.
+| Track | Prize (verbatim) | Slots |
+| --- | --- | --- |
+| 1st Place | First-place recognition for the highest-scoring eligible project. Non-cash recognition; no monetary prize. | 1 |
+| 2nd Place | Second-place recognition for the next highest-scoring eligible project. Non-cash recognition; no monetary prize. | 1 |
+| 3rd Place | Third-place recognition for the next highest-scoring eligible project. Non-cash recognition; no monetary prize. | 1 |
+| Runner-Up Recognition | Recognition for three additional standout eligible projects. Non-cash recognition; no monetary prize. | 3 |
 
-| Track | Entry | Cash | Required tech |
-| --- | --- | --- | --- |
-| 1st Place | automatic | none | none |
-| 2nd Place | automatic | none | none |
-| 3rd Place | automatic | none | none |
-| Runner-Up Recognition | automatic | none | none |
-
-The prize wording for each row is on the IdeaLab Hacks Devpost page; it was not in this repository when this table was written, so it is not quoted here.
+There is no sponsor bounty row. One Devpost submission enters all four rows automatically.
 
 ## AI use
 
-> Adjust this section to the hackathon's disclosure rules before submitting.
+The IdeaLab Hacks policy, in short: AI tools are allowed, not required, their licences must be respected, and their use must be stated. This is that statement.
 
-We used an AI coding assistant (Claude Code) for scaffolding, boilerplate and parts of the OCR confirmation code. Architecture, product decisions, and final code review are our own.
-
-At runtime there is no language model and no hosted AI service. The only model that runs is Tesseract.js, an open-source OCR engine (LSTM based) that executes in your browser. zod is a plain validation library, not AI.
+- **AI coding assistant:** Claude Code (Anthropic) wrote much of the code and copy under my direction, phase by phase. Product decisions, the model choices and the final review are mine.
+- **Libraries:** Next.js, React, Tailwind CSS, tesseract.js (with its English language data from jsDelivr), pdfjs-dist, zod, react-spring, use-gesture, lucide-react, Radix Slot, class-variance-authority, clsx, tailwind-merge, and the Red Hat Display and Red Hat Text fonts. Each is used under its own open-source licence.
+- **Data:** every example poster and vision profile is hand-authored in `lib/data/seed.ts`, and the sample OCR numbers in `lib/data/ocr-samples.ts`. No external dataset is used.
+- **At runtime** there is no language model and no hosted AI service. The only model that runs is Tesseract.js, an open-source OCR engine, in your browser.
 
 ## Credits
 
-- Tesseract.js (Apache 2.0), pdfjs-dist by Mozilla (Apache-2.0), zod (MIT), react-spring (MIT), @use-gesture (MIT), lucide-react (ISC), Next.js (MIT), tsx (MIT)
 - Machado, Oliveira and Fernandes (2009), "A Physiologically-based Model for Simulation of Color Vision Deficiency"
 - NC State "Legible Viewing Distance for Posters and Exhibits" table, used as the calibration anchor
+
+## License
+
+MIT, see `LICENSE`.
