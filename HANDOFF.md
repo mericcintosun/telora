@@ -6,70 +6,69 @@ You are picking up a working Next.js 15 app. Read this file, then `IDENTITY.md`,
 
 **Product:** Telora. Upload your poster and say where it will hang: Telora shows which line of text stops reading from across the hallway, and at exactly how many metres it disappears.
 
-**Hackathon:** IdeaLab Hacks (Devpost, online), themes Beginner Friendly, Design, Open Ended. **Deadline:** 30 November 2026, 23:45 EST (1 December 04:45 UTC). Judging: creativity, execution, usefulness, clarity, 25% each.
+**Hackathon:** IdeaLab Hacks (Devpost, online), themes Beginner Friendly, Design, Open Ended. **Deadline:** 30 November 2026, 23:45 EST (1 December 04:45 UTC). Judging: creativity, execution, usefulness, clarity, 25% each. Four automatic, non-cash main placement rows (1st Place, 2nd Place, 3rd Place, Runner-Up Recognition); no sponsor bounty row, so no bounty row was dropped and none needed code.
 
-**Verified submission requirements:** submit through Devpost; separate pre-existing work from event work (README "Built during IdeaLab Hacks"); credit every library and AI tool (README "Credits", "AI use"); describe capabilities accurately; explain what was learned.
-
-**Phase 3 goal (this session):** the 90-second demo path is real end to end. DEMO step 6 (corrected poster, green at 4 m) and the PDF part of step 7 go from "not built yet" to code; steps 1 to 5 get a fallback chain, zod URL params and the loading, error and empty triad.
+**Phase 4 goal (this session):** corridor view (DEMO step 8), PNG report (completes step 7), responsive audit at 360 px, share metadata, web hygiene sweep, `SECURITY.md`, `DELIVERY.md`.
 
 ## Status
 
-Phase 3 was done by reading and editing files only. Nothing was compiled, tested or run. `npm install` (new: `pdfjs-dist`), `npm run build`, `npm test`, `npm run proof`, `npm run demo:reset` and the browser walk are unverified until the runner and a human report back.
+Phase 4 was done by reading and editing files only. Nothing was compiled, tested or run. `npm run build`, `npm test`, `npm run proof`, the browser walk at 360, 768 and 1280 px, the PNG download on desktop and phone, and Lighthouse are unverified until the runner and a human report back. No dependency was added, so `npm install` changes nothing.
 
-**This is a plain web app.** No database, no server store, no `lib/store.ts`, no migration command, no store secret, no wallet state machine, no chain. `.farm-live.json` stays `{ "requiredEnv": [], "optionalEnv": [] }`.
+**This is a plain web app.** No database, no store, no contracts, no wallet, no chain. `.farm-live.json` is unchanged: `{ "requiredEnv": [], "optionalEnv": [] }`.
 
 ### Acceptance gate, checked by reading files
 
-- [x] Every DEMO step has a real code path and a fallback in the same file:
-  - Steps 1 to 5: `lib/adapter/index.ts:40` `getLabData()` tries `getAdapter()`, then `fakeAdapter` (`:46-48`), then the seed constants (`:51`). `app/page.tsx:19` calls it; `app/page.tsx:21` parses params with `LabParamsSchema.safeParse` and falls back to defaults on failure.
-  - Step 6: `lib/data/seed.ts:56` `robot-sumo-night-fixed` (`fixOf` on it, `correctedId` at `lib/data/seed.ts:37`). The button lives in `components/block-report.tsx` (`variantLink`).
-  - Step 7: `lib/ocr.ts` `scanPosterImage` routes a PDF to `renderFirstPage` (`lib/pdf.ts:91`) and then `scanPosterCanvas` (`lib/ocr.ts:492`). Typed errors: every failure is a `CoreFailure` code and `components/upload-scan.tsx` renders `scanErrorHint(state.code)`.
-- [x] Persistence: no store (see Decisions, table row and rejected rows).
-- [x] No runtime `fs` writes: Grep for `from "fs"`, `from "node:fs"`, `writeFile` over `app/`, `components/`, `lib/` returns nothing. `fs` is in `scripts/seed.ts`, `scripts/demo-reset.ts`, `scripts/proof.ts` and the build-time `next.config.ts` read (unchanged from Phase 1).
-- [x] No store secret: `.env.example` and `.farm-live.json` were not touched this phase.
-- [x] No auth screen, faucet or wallet code anywhere.
-- [x] Triad in `components/lab-states.tsx`: `LabSkeleton` (`:11`), `LabErrorState` with "Try again" calling `reset` (`:64`), `LabEmptyState` with `<a href="#upload">Check your own poster</a>` (`:82`). Route to file: `/` uses `app/loading.tsx:5` (`<LabSkeleton />`), `app/error.tsx:7` (`<LabErrorState reset={reset} />`), `components/poster-lab.tsx:109` (`<LabEmptyState />`). `/about` uses `app/about/loading.tsx:3` (`AboutSkeleton`) and `app/error.tsx`; empty state not applicable (static copy, no data).
-- [x] Upload guard: `components/upload-scan.tsx:45` `const scanInFlight = useRef(false)`, early return at `:60`, cleared in `finally` at `:86`. The input is `disabled={state.kind === "scanning"}` at `:119`, bound to state.
-- [x] zod everywhere data enters: page params `app/page.tsx:21`; API ids `app/api/posters/route.ts:25` and `app/api/profiles/route.ts:25` (`ApiIdSchema`, `lib/schemas.ts:52`). Bad id: 400 `coreError("invalid_input")`; unknown id: 404 `coreError("invalid_input")`; adapter throw: 502 `toCoreError(err)`.
-- [x] No chained client-effect fetches: Grep `fetch(` in `components/` has zero hits. `SceneSlot` now uses `next/image` (`components/scene-slot.tsx:1`); it used a plain `<img>` before, so it was changed.
-- [x] `package.json:12` has `demo:reset`; `scripts/demo-reset.ts` exists and imports `writeSeedSnapshot` from `scripts/seed.ts`. No migration command; README "Resetting the demo" says why.
-- [x] `pdfjs-dist` at `package.json:22` (`^5.0.0`), imported only by dynamic `import("pdfjs-dist")` at `lib/pdf.ts:38` (`lib/pdf.ts:13` is a type-only `typeof import(...)`). README Tech stack says "pdfjs-dist 5".
-- [x] Imports added this phase resolve: `@/components/lab-states`, `@/lib/pdf`, `@/lib/schemas` (`LabParamsSchema`, `ApiIdSchema`), `next/image`, `./seed` from `scripts/demo-reset.ts`, `pdfjs-dist` (declared). Seed: 5 posters, 4 profiles, so `/` is non-empty.
-- [x] Sameness greps over `app/`, `components/`, `lib/`, `README.md`: zero hits for the dead hexes, banned keyframes, `--delay`, `--d:`, `animate-pulse`, `backdrop-blur`. The only keyframe is still `telora-fade`. Header untouched.
-- [x] Writing rules: zero hits for the em dash, en dash, spaced double hyphen and the banned words in `app/`, `components/`, `lib/`, `scripts/`, `tests/`, README.md, DEMO.md, HANDOFF.md (checked before this file was written; this file was written to the same rules).
-- [x] Stack claims: README names Next 15, React 19, Tailwind 4, Tesseract.js 6, zod 3, pdfjs-dist 5, react-spring 10; all match `package.json` majors.
-
-Runner checks (not done by the agent): `npm install`, `npm run build` with zero TypeScript errors (including `lib/pdf.ts` against the installed pdfjs-dist 5 types and the `next.config.ts` webpack alias), `npm test` (now two files), `npm run proof` (four blocks), `npm run demo:reset` exit 0, Vercel redeploy.
-
-### Manual checklist for the human
-
-- [ ] Confirm student eligibility and the Devpost video length limit on the IdeaLab Hacks rules page.
-- [ ] Private window, three cycles with identical results: steps 1 to 5 instant; "Open the corrected poster" shows every line green at 4 m; upload one PNG and one PDF, both run the 8-step bar and show "OCR: x m, model: y m". Note the scan time; if over 5 s on a large poster, write it here.
-- [ ] Drop a second file while a scan runs: nothing happens (input disabled, guard in place).
-- [ ] Upload a password-protected PDF: the card shows the parse_failure sentence.
-- [ ] Console during the first upload: a `[core] ocr warm` line should appear soon after page load, before the upload.
+- [x] Corridor view: `components/corridor-view.tsx:1` is `"use client"`; imported at `components/poster-lab.tsx:6` and rendered when `view === "corridor"`. Empty (no poster or zero blocks) renders `LabEmptyState` with "Pick an example poster or drop your own file, then the corridor shows it on the wall." (`CORRIDOR_EMPTY_MESSAGE`). Loading and error for the route are `app/loading.tsx` (`LabSkeleton`) and `app/error.tsx` (`LabErrorState`); the corridor itself does no async work. DEMO.md row 8 names `app/page.tsx` and the expected result.
+- [x] Toggle: "Flat" / "Corridor" buttons in the stage bar of `components/poster-lab.tsx` (role group "Stage"). `view` is validated by `LabViewSchema` in `lib/schemas.ts` and parsed in `app/page.tsx` through `LabParamsSchema`. No `useSearchParams` anywhere (Grep: zero hits). No new route file.
+- [x] Apparent scale and outlines come from existing data: height share is `apparentHeightShare(size, distanceM)` (`lib/legibility.ts`, visual angle 2 atan(h / 2d) over a 30 degree view); outlines and the caption use the lab's `scores` (from `maxReadableDistanceM` and `verdictAt`). Motion: `useSpring` on the height only, `immediate` under reduced motion; the stage swap fades with the existing `telora-enter` class.
+- [x] PNG report: `renderReportPng` exported from `lib/report.ts`, imported by `components/poster-lab.tsx` (`ReportDownload`). Canvas is created inside the function (`newCanvas`), colors from `getComputedStyle` on the `--t-*` variables, object URL revoked 4 s after the click. No `fs` (Grep `from "fs"|from "node:fs"` over `app/`, `components/`, `lib/`: zero hits). Disabled with a one-line reason when there is no poster or no text lines; failures map to a `CoreErrorCode` and show a report-specific hint (`REPORT_HINT`).
+- [x] Header: one brand mark, one link, one action (`components/site-header.tsx`). Below `sm` the link reads "About" and the share button "Share"; mark link is `shrink-0`, nav `min-w-0`, gaps reduced. Estimated width at 360 px: about 300 px of content in 328 px.
+- [x] Touch targets: `components/ui/button.tsx` sizes are `h-11` (default), `min-h-11` (sm), `h-11 w-11` (icon), `h-12` (lg). Explicit `min-h-11` on the stage toggle, verdict toggle, size and profile buttons, slider, report download, "Open the corrected poster", share button and header link. Upload input is `h-11` (`components/ui/input.tsx`).
+- [x] Metadata: `app/layout.tsx` default title "Telora: know before you print", template `"%s | Telora"`, description 130 characters, `openGraph` (title, description, siteName, type website, url), `twitter.card: "summary_large_image"`, `metadataBase` https. `/` no longer sets its own title, so it shows the default. `app/opengraph-image.tsx` is 1200x630 and now carries "Know before you print."
+- [x] Hygiene greps over `app/`, `components/`, `lib/`: no `console.log` (only `console.info` core-path lines in `lib/ocr.ts` and `lib/pdf.ts`, which carry ids, counts and durations); no `target=`; no `http://` (only the SVG namespace in `app/icon.svg`, untouched); no `<form>`; no key-like strings (`sk-`, `PRIVATE_KEY`, 64-hex, long base64: zero hits). Env reads: `ADAPTER_MODE` and `NEXT_PUBLIC_BRAND_FILES`, both in `.env.example`.
+- [x] Wallet grep (`eth_requestAccounts|window.ethereum|wagmi|connect\(|eth_sign|personal_sign`): the only hits are `ro.disconnect()` on ResizeObservers in `components/poster-deck.tsx:65` and `components/simulated-poster.tsx:62`, which are not wallet code. The wallet rules verify vacuously; the Blockaid warning is not expected.
+- [x] Sameness tripwire over `app/`, `components/`, `lib/`: zero hits for the dead hexes, `fade-up`, `float-y`, `glow-pulse`, `caret-blink`, `pulse-dot`, `backdrop-blur`, `--delay`, `--d:`. The only `@keyframes` is `telora-fade` (`app/globals.css:150`). Hex literals only in `app/globals.css` and `lib/og-colors.ts`.
+- [x] Writing rules: zero hits for em dash, en dash, spaced double hyphen and the banned words in `app/`, `components/`, `lib/`. The docs written this phase follow the same rules.
 
 ## Decisions
 
-**Persistence.**
+- **Contract front skipped: no contracts/ directory, plain web app.**
+- **Wallet front:** nothing to fix; `SECURITY.md` says none for addresses, permissions and approvals. No footer wallet section.
+- **Corridor scale:** a fixed 30 degree vertical view. The poster's share of it is its visual angle, clamped between 2% and 66% of the stage so it never leaves the back wall. Apparent size is therefore close to proportional to size / distance, using the same geometry as the verdicts.
+- **Corridor chips:** `SimulatedPoster` got a `compact` prop that hides the "Label: N m max" chips (they do not fit on a small poster). The legend under the corridor lists each line with its distance and verdict instead.
+- **Corridor motion:** the spring animates the poster's `height`, not a transform, so the M5 rule (opacity only for entrances, no transform animation) holds. The perspective is static `clip-path` panels and SVG lines in token colors (DEEP back wall, SURFACE side walls and floor, GROUND ceiling, LINE edges and floor line).
+- **Report hints:** the shared `HINTS` in `lib/errors.ts` talk about OCR, so the report keeps its own sentence per `CoreErrorCode` in `components/poster-lab.tsx`. No new code was added to `lib/errors.ts`.
+- **Report contents:** the poster is redrawn from its blocks (seed) or from the upload's object URL, blurred with `blurSigmaPx` for the drawn height through `ctx.filter`, then numbered verdict outlines and one row per line, weakest first. The deuteranopia filter is not drawn; the footer says so.
+- **Button sizes:** raising every Button size to 44 px was simpler and safer than tagging each call site. The rail cards already override with `h-auto`.
+- **Card grids** on `/` and `/about` collapse to one column below `md` (were `sm`).
+- **Page body** has `overflow-x-clip` (not `hidden`, which would break the sticky header) as a guard against stray sideways scroll.
+- **`/` title:** removed the page-level "Poster distance lab" title so the home page shows "Telora: know before you print".
+- **Tesseract CDN:** documented, not changed. Self-hosting the language data would need copying files into `public/` and passing paths; it was out of scope.
+- **Proof script untouched:** no new measurable fact that `npm run proof` could compute without a browser.
 
-| Option | Verdict | Why |
-| --- | --- | --- |
-| Steps only read seeded or computed data (no store) | **Chosen** | Seed constants in `lib/data/seed.ts`; uploads stay in the browser; tab cache in `lib/cache.ts`. |
-| KV | Rejected | Nothing mutable is shared between visitors. |
-| Postgres | Rejected | No relational reads. |
-| On-chain | Rejected | No chain in this repo. The "reset the chain state" part of a demo reset is a no-op. |
+## Responsive audit (by reading classes; smallest route first)
 
-- **Fallback chain in `getLabData`:** active adapter, then `fakeAdapter` (only if the active one was not already fake), then the seed constants with `mode: "real"` (no OCR numbers, so nothing is invented). An empty list counts as a failure. `usedFallback` is returned for later use; the UI does not show it yet.
-- **`/about` has no empty state:** it is static copy with no data.
-- **Corrected poster enlarges the date 2.1x, not 1.7x.** The fix recipe's 1.7x brings the date to exactly 4.0 m, and `verdictAt` only calls a line green (legible) when the distance is at most 85% of its max, so 1.7x shows amber. Every rsf block targets about 5 m: date 0.94 to 1.95, venue 0.8 to 2.4 (accent on ground, contrast 5.0), pitch 0.6 to 1.95, QR caption 0.43 to 1.95, title unchanged at 3.53. Hand math is in the comment above the poster in `lib/data/seed.ts`. The report wording "enlarge it 1.7x" on the original is unchanged and tested (`tests/corrected.test.ts`).
-- **20/40 is not asserted for the corrected poster.** 20/40 doubles the threshold, so lines would need about 3.2% cap height on A2 and the date would run wider than the sheet. Documented in the test header.
-- **The corrected poster is off the rail;** while it is open, the rail keeps its original highlighted. The report shows "Open the corrected poster" on the original and "Back to the original" on the variant; both call the lab's `selectPoster`, which resets size and distance to A2 and 4.0 m and goes through the existing URL sync.
-- **PDF path:** `scanPosterImage` hashes the PDF file (SHA-256 plus size plus profile, `scanCacheKey`), renders page 1 with `renderFirstPage(file, OCR_LONG_EDGE_PX)`, then calls `scanPosterCanvas` with that key. A cache hit still renders the page (needed for the preview image). The image path also goes through `scanPosterCanvas` now, so both share one code path.
-- **pdf.js render params:** pdf.js 5 moved from `canvasContext` to `canvas` across minor versions, so `lib/pdf.ts` passes both through a cast to `Parameters<typeof page.render>[0]`. Worker failures (message mentions the worker, not a file error name) get one retry, then `upstream_error`; anything else from pdf.js is `parse_failure`.
-- **Engine warm-up:** `warmOcrEngine()` loads one worker once per tab (timeout plus one retry, same as scans), then terminates it; the browser keeps the engine and language data cached. It never rejects.
-- **`ApiResponse` error variant** gained an optional `hint`, so API errors can carry the `coreError` body. Type only, no data schema change.
-- **`invalid_input` hint** now names PDF as accepted; `parse_failure` also covers a damaged or password-protected PDF.
+| Route | Wide element | Before | After |
+| --- | --- | --- | --- |
+| `app/not-found.tsx` | centred column `max-w-xl` | fits | unchanged, renders inside `app/layout.tsx` so the header stays |
+| `app/error.tsx` | `LabErrorState` `max-w-xl` card | fits; buttons 40 px | buttons 44 px through `button.tsx`; renders inside the layout, header stays |
+| `app/about/page.tsx` | NC State table `min-w-[32rem]` | already in `overflow-x-auto` | unchanged |
+| `app/about/page.tsx` | "What runs where" cards | 2 columns from `sm` | 2 columns from `md` |
+| header (all routes) | mark + "How it works" + "Share this view" | about 386 px at 360 | short labels below `sm`, about 300 px |
+| `/` claim band | h1, line, CTA | CTA fixed width | CTA `w-full` below `sm` |
+| `/` rail (`poster-deck.tsx`) | 232 px cards | clipped inside `overflow-hidden` viewport | unchanged (allowed); arrows now 44 px |
+| `/` poster stage (`poster-lab.tsx`) | `h-[min(66vh,41rem)] min-h-[27.5rem]`, `p-6` | 440 px min height, 278 px wide content at 360 | `min-h-[22rem]` and `p-4` below `sm`, `w-full max-w-full`; grid columns `min-w-0` |
+| `/` stage bar | status line + verdict toggle | one button | wraps; adds Flat/Corridor group, all 44 px |
+| `/` corridor (`corridor-view.tsx`) | stage `h-[min(60vh,34rem)]` | new | `w-full max-w-full`, legend chips wrap and truncate |
+| `/` "Block by block" | `ol` rows with truncate | already a card list | unchanged; download button `w-full` below `sm` |
+| `/` upload card | file input `w-full h-11` | fits | unchanged |
+| `/` story sections | 3 cards | 3 columns from `sm` | 3 columns from `md` |
+
+Found, not fixed:
+
+- **Low:** a landscape upload on a phone can be squeezed sideways in the flat stage, because the stage sets the height and `max-w-full` clamps the width. Shortest fix: in `SimulatedPoster`, when `aspect > 1`, size by width (`w-full h-auto`) instead of height.
+- **Low:** at 360 px the rail shows one card and part of the next, clipped; the arrows and throw still work.
+- **Low:** the corridor clamps the poster at 66% of the stage, so very close distances on A0 look the same size. Shortest fix: let the wall grow or show "closer than the wall can show".
 
 ## Failed attempts
 
@@ -77,11 +76,12 @@ None in this session. No cut from the cut protocol was needed (not verified by r
 
 ## Files changed
 
-Slice 1: `lib/adapter/index.ts`, `lib/schemas.ts`, `lib/types.ts`, `app/page.tsx`, `app/api/posters/route.ts`, `app/api/profiles/route.ts`, `components/lab-states.tsx` (new), `app/loading.tsx`, `app/about/loading.tsx`, `app/error.tsx`, `components/poster-lab.tsx`.
-Slice 2: `lib/types.ts`, `lib/data/seed.ts`, `lib/adapter/fake.ts`, `components/poster-deck.tsx`, `components/block-report.tsx`, `components/poster-lab.tsx`, `tests/corrected.test.ts` (new), `tests/confirm.test.ts` (seed count 5, PDF accepted).
-Slice 3: `package.json`, `next.config.ts`, `lib/config.ts`, `lib/errors.ts`, `lib/pdf.ts` (new), `lib/ocr.ts`, `components/upload-scan.tsx`.
-Slice 4: `components/upload-scan.tsx`, `lib/ocr.ts`, `components/scene-slot.tsx`.
-Slice 5: `package.json`, `scripts/seed.ts`, `scripts/demo-reset.ts` (new), `scripts/proof.ts`, `README.md`, `DEMO.md`, `CLAUDE.md`, `HANDOFF.md`, `.farm-commits.json`.
+Slice 1 (corridor): `components/corridor-view.tsx` (new), `components/poster-lab.tsx`, `components/simulated-poster.tsx` (`compact`), `components/lab-states.tsx` (`message` prop), `lib/legibility.ts` (`apparentHeightShare`, `CORRIDOR_FOV_DEG`), `lib/schemas.ts` (`LabViewSchema`, `view`), `app/page.tsx` (`view` into `initial`), `DEMO.md`.
+Slice 2 (PNG report): `lib/report.ts` (new), `components/poster-lab.tsx` (`ReportDownload`), `DEMO.md`.
+Slice 3 (responsive): `components/ui/button.tsx`, `components/site-header.tsx`, `components/header-link.tsx`, `components/share-view-button.tsx`, `components/poster-lab.tsx`, `components/block-report.tsx`, `app/layout.tsx` (`overflow-x-clip`), `app/page.tsx`, `app/about/page.tsx`.
+Slice 4 (meta): `app/layout.tsx`, `app/opengraph-image.tsx`, `app/page.tsx`, `components/lab-states.tsx`, `components/poster-deck.tsx`, `components/block-report.tsx` (empty-state copy), `README.md`.
+Slice 5 (security, delivery): `lib/config.ts` (`OCR_ASSET_HOST`), `app/about/page.tsx`, `SECURITY.md` (new), `DELIVERY.md` (new), `README.md`.
+Slice 6: `HANDOFF.md`, `.farm-commits.json`.
 
 ## Commands run
 
@@ -91,35 +91,33 @@ None, the agent cannot run commands.
 
 | File | What it does |
 | --- | --- |
-| `app/page.tsx` | `/`: claim band + `PosterLab` fed by `getLabData()`, params through `LabParamsSchema` |
+| `app/page.tsx` | `/`: claim band + `PosterLab` fed by `getLabData()`, params (including `view`) through `LabParamsSchema` |
 | `app/loading.tsx`, `app/error.tsx`, `app/about/loading.tsx` | Triad wrappers over `components/lab-states.tsx` |
 | `app/api/posters/route.ts`, `app/api/profiles/route.ts` | Read-only JSON, optional `?id=` (zod), codes from `lib/errors.ts` |
-| `components/lab-states.tsx` | `LabSkeleton`, `LabErrorState`, `LabEmptyState` |
-| `components/poster-lab.tsx` | The tool: state, URL sync, controls, report, upload card |
+| `components/lab-states.tsx` | `LabSkeleton`, `LabErrorState`, `LabEmptyState` (optional `message`) |
+| `components/poster-lab.tsx` | The tool: state, URL sync, Flat/Corridor toggle, controls, report, `ReportDownload`, upload card |
+| `components/corridor-view.tsx` | DEMO step 8: poster on a hallway wall, spring-sized |
 | `components/poster-deck.tsx` | Throwable rail (signature 1), hides `fixOf` posters |
 | `components/block-report.tsx` | Per-block distance, recipe, OCR line, open corrected / back to original |
 | `components/upload-scan.tsx` | Upload card: zod check, `scanInFlight` guard, idle warm-up, 8-step progress, PDF accepted |
+| `lib/report.ts` | `renderReportPng()`: canvas PNG report and download |
+| `lib/legibility.ts` | Distance model, blur, `apparentHeightShare` |
 | `lib/adapter/index.ts` | `getAdapter()`, `getLabData()` fallback chain |
-| `lib/pdf.ts` | `renderFirstPage()` through dynamic pdfjs-dist |
-| `lib/ocr.ts` | `scanPosterImage()`, `scanPosterCanvas()`, `confirmAtDistances()`, `warmOcrEngine()` |
+| `lib/pdf.ts`, `lib/ocr.ts` | PDF first page, OCR scan and 8-distance confirmation |
 | `lib/data/seed.ts` | 5 posters (24 blocks), 4 profiles |
-| `scripts/seed.ts`, `scripts/demo-reset.ts`, `scripts/proof.ts` | Snapshot writer, reset check, README proofs |
-| `tests/confirm.test.ts`, `tests/corrected.test.ts` | `npm test` |
+| `SECURITY.md`, `DELIVERY.md` | No chain, no wallet, what leaves the browser; per-track delivery and the human checklist |
 
 ## Open questions
 
-- Unverified until build: whether the installed pdfjs-dist 5.x types accept the `getDocument({ data })` call and `task.destroy()` as written in `lib/pdf.ts`. The render params are cast, so that call is safe either way.
-- Unverified until run: whether Next 15 webpack emits `pdf.worker.min.mjs` from `new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url)` in `lib/pdf.ts`. If the worker 404s on Vercel, the PDF upload shows the `upstream_error` sentence after one retry; the fallback would be copying the worker into `public/` at build time.
-- Unverified: whether pdf.js 5 needs extra polyfills in older Safari (it uses newer JS such as `Promise.withResolvers`). If so, PDF upload fails there with a typed error and images still work.
-- Unverified: scan time on a large poster. Record it here after the human walk.
-- The spec asked for the corrected date at about 1.6% cap height (1.7x). It is 1.95% (2.1x) so the line is green, not amber, at 4 m; see Decisions. The narration "enlarge it 1.7x" still matches the original's recipe line.
-- `tests/corrected.test.ts` asserts only 20/20; 20/40 cannot hold at 4 m without overlap.
-- Carried over: real-world agreement between OCR and model distances; the downscale blur fallback is an approximation; `tesseract.js` namespace vs default export (handled both ways).
-- Confirm student eligibility and the Devpost video limit.
+- **Prize wording:** the spec asks the README to quote each track's `prizeVerbatim` byte for byte, but no prize text exists anywhere in this repository. The README lists the four rows with their facts and says the wording is on the Devpost page. Shortest fix: paste the four lines from the Devpost prize list into the README "Prize tracks" table.
+- **Unverified until build:** `ctx.roundRect` and `ctx.filter` type checks in `lib/report.ts` (both are in the TypeScript 5 DOM lib; `roundRect` has a `rect` fallback at runtime); `stroke-border` utility on the corridor SVG (Tailwind 4 generates `stroke-*` from `--color-border`).
+- **Unverified until run:** the corridor view on a real phone; the PNG download in Safari (object URL revoked after 4 s; iOS Safari may open the image in a new tab instead of saving it); canvas text in the report uses the loaded Red Hat fonts after `document.fonts.ready`.
+- **Carried over:** pdf.js 5 types and worker emission on Vercel, older Safari polyfills, scan time on a large poster, OCR versus model agreement in the real world, `tests/corrected.test.ts` asserts 20/20 only.
+- Confirm student eligibility and the Devpost video limit (in `DELIVERY.md`).
 
 ## Next best step
 
-Phase 4: corridor view (poster small on a wall in perspective), downloadable PNG report, kit signature 2 (spring gauge on the lost-line count), signature 3 (pointer tilt on the poster), mobile layout polish. Optionally show `usedFallback` from `getLabData` as a one-line note in the lab.
+Phase 5 frontend pass: signature 2 (spring gauge on the lost-line count, overshoot and settle when the value changes) and signature 3 (pointer tilt on the poster or the primary control), both with `@react-spring/web` and `@use-gesture/react` in `"use client"` components, honoring reduced motion. Then fix the low items in the responsive audit.
 
 ## Constraints
 
