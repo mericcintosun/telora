@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "node -e \"console.log('seed: nothing to do yet, the seed posters live in lib/data.ts')\""
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",
@@ -27,6 +27,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4.1.11",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }

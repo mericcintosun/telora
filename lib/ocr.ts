@@ -8,13 +8,10 @@
 // NEXT: confirm the arcmin estimate by re-reading the blurred poster at the 8 fixed
 // distances in SCAN_DISTANCES_M and recording where the word match drops (see HANDOFF.md).
 
-import type { PosterBlock, PosterRecord } from "@/lib/data";
+import type { PosterBlock, PosterRecord, ScanProgress } from "@/lib/types";
 
-export interface ScanProgress {
-  stage: string;
-  /** 0 to 1 */
-  progress: number;
-}
+// The shape lives in lib/types.ts; re-exported so `import { type ScanProgress } from "@/lib/ocr"` keeps working.
+export type { ScanProgress } from "@/lib/types";
 
 interface OcrBox {
   x0: number;
