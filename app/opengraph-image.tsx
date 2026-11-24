@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { OG_ACCENT, OG_GROUND, OG_INK, OG_LINE, OG_SECOND } from "@/lib/og-colors";
 
-export const alt = "Telora: see your poster from across the hallway, before you print it";
+export const alt = "Telora: know before you print. See which poster line stops reading, and at how many metres.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -29,8 +29,9 @@ export default function OpengraphImage() {
       >
         <div style={{ display: "flex", flexDirection: "column", maxWidth: 680 }}>
           <div style={{ fontSize: 96, fontWeight: 900, letterSpacing: -3, color: ACCENT }}>Telora</div>
-          <div style={{ fontSize: 40, lineHeight: 1.25, marginTop: 20 }}>
-            Upload a poster, say where it hangs. See which line goes unreadable, and at how many metres.
+          <div style={{ fontSize: 44, fontWeight: 700, marginTop: 12 }}>Know before you print.</div>
+          <div style={{ fontSize: 34, lineHeight: 1.25, marginTop: 20 }}>
+            Upload a poster, say where it hangs. See which line stops reading, and at how many metres.
           </div>
         </div>
         <div

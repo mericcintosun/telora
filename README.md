@@ -27,6 +27,8 @@ Upload your own poster (PNG, JPG, WebP, or the first page of a PDF) and Telora a
 
 On the club poster, "Open the corrected poster" in the report loads a version with every lost line enlarged, and it reads green at 4 m.
 
+Click "Corridor" above the poster and the same poster hangs small on a hallway wall, as tall as it looks from where you stand, with the lost lines outlined in red. "Download PNG report" saves the poster at that distance with every line's distance and fix as one image.
+
 ## What works
 
 - The example posters load on `/` with no click, from the seed through one adapter, with a fallback chain (active adapter, then fake adapter, then the seed constants) in `getLabData` (`lib/adapter/index.ts`).
@@ -35,6 +37,9 @@ On the club poster, "Open the corrected poster" in the report loads a version wi
 - Upload scan of PNG, JPG, WebP and PDF (first page through pdfjs-dist), with the 8-distance OCR confirmation, in the browser.
 - Every setting lives in the URL. Bad URL params fall back to defaults without an error (zod, `LabParamsSchema`).
 - Loading, error and empty states for the lab (`components/lab-states.tsx`).
+- Corridor view (DEMO step 8, `components/corridor-view.tsx`): the poster on a hallway wall, sized by the visual angle of the printed sheet at the chosen distance (`apparentHeightShare` in `lib/legibility.ts`), outlined with the same verdicts, with "N of M lines readable at D m." under it. `?view=corridor` keeps it in the link.
+- PNG report (`renderReportPng` in `lib/report.ts`): drawn on a canvas in the browser from the CSS color tokens, downloaded through an object URL that is revoked afterwards. No server route.
+- Every control on the demo path has a 44 px touch target, and the header fits a 360 px screen (short labels below the `sm` breakpoint).
 
 ## How it uses its tech
 
@@ -45,9 +50,10 @@ There is no sponsor SDK in this hackathon. The technical core is:
 - **zod** checks the uploaded file (type and size) before any scan logic runs, validates the OCR result shape, the URL params on `/` and the `?id=` on the two API routes.
 - **Canvas 2D** measures luminance contrast inside each line box, once as-is and once after the **Machado 2009 deuteranopia matrix**.
 - **CSS filters** apply the distance blur, a contrast cut for the low-contrast profile, and an SVG `feColorMatrix` with the same Machado matrix for the deuteranopia preview.
-- **react-spring and @use-gesture** drive the poster rail: throw it and the release velocity decides which example loads.
+- **react-spring and @use-gesture** drive the poster rail: throw it and the release velocity decides which example loads. A react-spring `useSpring` also settles the poster's size in the corridor view when the distance changes.
+- **Canvas 2D** draws the PNG report in the tab, with the same blur and verdict colors as the live preview.
 
-The scan and the model run in the browser. No key, and your poster is never uploaded. The example posters and vision profiles come from a seed module through one adapter (`lib/adapter`), which the pages and two read-only JSON routes (`/api/posters`, `/api/profiles`) share.
+The scan and the model run in the browser. No key, and your poster is never uploaded. The OCR engine's worker, WebAssembly core and English language data download from jsDelivr (`cdn.jsdelivr.net`, the Tesseract.js default, named as `OCR_ASSET_HOST` in `lib/config.ts`); the pdf.js worker is served from this site. See `SECURITY.md`. The example posters and vision profiles come from a seed module through one adapter (`lib/adapter`), which the pages and two read-only JSON routes (`/api/posters`, `/api/profiles`) share.
 
 ## How the OCR confirmation works
 
@@ -151,16 +157,27 @@ Tests: 16 passed, 0 failed (2 files, node:test through tsx, written by `npm run 
 
 Before the event: nothing but a generic Next.js starter template (layout, Tailwind setup, empty button/card/badge/input primitives).
 
-During the event: everything in this repository's commit history, starting with the scaffold commits. That covers the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the 8-distance OCR confirmation, PDF upload through pdfjs-dist, the corrected club poster, the throwable poster rail, the adapter with its fallback chain and API routes, the loading, error and empty states, the demo reset script, the tests and proof script, every illustration and all copy.
+During the event: everything in this repository's commit history, starting with the scaffold commits. That covers the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the 8-distance OCR confirmation, PDF upload through pdfjs-dist, the corrected club poster, the corridor view, the PNG report, the throwable poster rail, the adapter with its fallback chain and API routes, the loading, error and empty states, the demo reset script, the tests and proof script, every illustration and all copy.
 
 ## Not built yet
 
 None of these run today:
 
-- A corridor view that shows the poster small on a wall in perspective.
-- A downloadable PNG report with every block's verdict and fix.
 - A spring gauge on the lost-line count and a pointer tilt on the poster.
-- Mobile layout polish.
+- The deuteranopia color filter inside the PNG report (the live lab shows it; the report's distances already include it).
+
+## Prize tracks
+
+IdeaLab Hacks has four main placement rows. All four are automatic (the one Devpost submission enters every row), non-cash, with no sponsor and no required technology. There is no sponsor bounty row, so no bounty table applies to this project.
+
+| Track | Entry | Cash | Required tech |
+| --- | --- | --- | --- |
+| 1st Place | automatic | none | none |
+| 2nd Place | automatic | none | none |
+| 3rd Place | automatic | none | none |
+| Runner-Up Recognition | automatic | none | none |
+
+The prize wording for each row is on the IdeaLab Hacks Devpost page; it was not in this repository when this table was written, so it is not quoted here.
 
 ## AI use
 

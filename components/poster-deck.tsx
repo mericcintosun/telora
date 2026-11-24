@@ -92,7 +92,8 @@ export function PosterDeck({
   if (posters.length === 0) {
     return (
       <p className="rounded-2xl border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted-foreground">
-        No posters yet. Upload one below.
+        No example posters on the rail yet. Drop your own file in the upload card below and the lab scores every
+        line it finds.
       </p>
     );
   }
