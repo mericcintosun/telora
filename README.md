@@ -23,30 +23,68 @@ Every block gets a line like "Event date: 2.4 m max" and a fix: "enlarge it 1.7x
 
 Drag the distance slider from 1 m to 6 m and you watch the poster blur and the lines turn red one by one.
 
+Upload your own poster and Telora also re-reads it with OCR at 8 distances, so each line gets a second opinion: "OCR: 2.0 m, model: 2.4 m".
+
 ## How it uses its tech
 
 There is no sponsor SDK in this hackathon. The technical core is:
 
-- **Tesseract.js** scans an uploaded PNG, JPG or WebP in a Web Worker and returns every text line with its bounding box. The line height becomes the letter height the model scores.
+- **Tesseract.js** scans an uploaded PNG, JPG or WebP in Web Workers and returns every text line with its bounding box. The line height becomes the letter height the model scores. It then re-reads the poster blurred to 8 distances to confirm the model (see below).
+- **zod** checks the uploaded file (type and size) before any scan logic runs, and validates the OCR result shape.
 - **Canvas 2D** measures luminance contrast inside each line box, once as-is and once after the **Machado 2009 deuteranopia matrix**.
 - **CSS filters** apply the distance blur, a contrast cut for the low-contrast profile, and an SVG `feColorMatrix` with the same Machado matrix for the deuteranopia preview.
 - **react-spring and @use-gesture** drive the poster rail: throw it and the release velocity decides which example loads.
 
 The scan and the model run in the browser. No key, and your poster is never uploaded. The example posters and vision profiles come from a seed module through one adapter (`lib/adapter`), which the pages and two read-only JSON routes (`/api/posters`, `/api/profiles`) share.
 
+## How the OCR confirmation works
+
+The distance model is geometry. The OCR confirmation is a second, independent signal from an actual reader. It runs only on posters you upload, in your browser (`lib/ocr.ts`, pure logic in `lib/confirm.ts`).
+
+1. **First pass.** Tesseract.js finds the text lines on the sharp poster (long edge scaled to 1600 px).
+2. **8 distances.** For each of 1, 1.5, 2, 3, 4, 5, 7 and 10 m, the poster is blurred with the same Gaussian sigma the live preview uses at that distance (`blurSigmaPx` in `lib/legibility.ts`) for your paper size and vision profile.
+3. **Re-read.** A Tesseract scheduler with 2 workers reads the 8 blurred copies in parallel. Each recognized word is assigned to the line whose box contains its center.
+4. **The 60% word rule.** A line counts as readable at a distance while at least 60% of its words still match (multiset match, lowercase, punctuation stripped). Its OCR distance is the farthest distance where it and every closer distance pass. 0 means it was already lost at 1 m.
+5. **Report.** Each line reads "OCR: 2.0 m, model: 2.4 m", green when OCR reaches at least 85% of the model distance, amber otherwise.
+
+**A machine reader, not a person.** Tesseract gives up on blur earlier than a human who knows what a date looks like, and it can read some low-contrast pairs a person struggles with. The OCR number confirms the model; it does not replace it.
+
+**Safari blur fallback.** Browsers without `CanvasRenderingContext2D.filter` (Safari) get a downscale then upscale blur of a similar strength instead of a true Gaussian. The upload card says so when that happens.
+
+**Limits.** Each worker load has a timeout and exactly one retry, each read has its own timeout. If the confirmation fails, the poster still shows its model distances and the card shows a one-sentence reason. Results are cached in memory for the tab, keyed by the SHA-256 of the file plus paper size and profile, so the same file reads identically the second time.
+
+**Example posters.** With `ADAPTER_MODE=fake` (the default) the four example posters carry hand-written sample OCR numbers (`lib/data/ocr-samples.ts`), labelled "Sample OCR" in the report. With `ADAPTER_MODE=real` they carry none. Uploads always get the live check.
+
+<!-- PROOF:BEGIN ocr -->
+Not run in this build: the 8-distance OCR needs a browser and this runner has none.
+<!-- PROOF:END ocr -->
+
 ## What we learned
 
 - The NC State anchor of 20 pt readable to about 7 ft lines up with an 8 arcmin cap height threshold almost exactly (20 pt capitals are about 4.9 mm, which covers 7.96 arcmin at 2.13 m). That one number calibrates the whole model.
+
+<!-- PROOF:BEGIN calibration -->
+Computed with `lib/legibility.ts` by `npm run proof`.
+
+| Paper | 20 pt cap height | Model distance (20/20) | NC State table |
+| --- | --- | --- | --- |
+| A3 | 4.9 mm | 2.1 m (2.12 m) | about 7 ft (2.13 m) |
+| A2 | 4.9 mm | 2.1 m (2.12 m) | about 7 ft (2.13 m) |
+| A1 | 4.9 mm | 2.1 m (2.12 m) | about 7 ft (2.13 m) |
+| A0 | 4.9 mm | 2.1 m (2.12 m) | about 7 ft (2.13 m) |
+<!-- PROOF:END calibration -->
 - A Gaussian blur is a simplification of the eye's contrast sensitivity curve. Lighting, glare and viewing angle are ignored. The numbers are most useful as a ranking: if the date lasts 2.4 m and the title 9 m, the date is your problem.
 - Contrast matters more than we expected. Peach text on a light background loses about half its reading distance compared with dark ink at the same size.
 
 ## Tech stack
 
-- Next.js 15 (App Router), React 19, TypeScript strict, Tailwind CSS v4, shadcn-style primitives
+- Next.js 15 (App Router), React 19, TypeScript strict, Tailwind CSS v4, shadcn-style primitives (Radix Slot, class-variance-authority, clsx, tailwind-merge)
 - Tesseract.js 6 (in-browser OCR)
+- zod 3 (upload and OCR result validation)
 - @react-spring/web 10 and @use-gesture/react 10
+- lucide-react icons
 - Red Hat Display and Red Hat Text via next/font
-- tsx (dev only, runs `npm run seed`)
+- tsx (dev only, runs `npm run seed`, `npm test` and `npm run proof`)
 - Deployed on Vercel with the standard Next build
 
 ## Quickstart
@@ -57,21 +95,31 @@ npm run dev
 # open http://localhost:3000
 ```
 
-No secrets are needed. `.env.example` lists one optional key, `ADAPTER_MODE` (`fake` by default). `npm run seed` writes the seed to `fixtures/seed-snapshot.json`.
+No secrets are needed. `.env.example` lists one optional key, `ADAPTER_MODE` (`fake` by default: example posters show sample OCR numbers; `real`: they show none). `npm run seed` writes the seed to `fixtures/seed-snapshot.json`.
 
-Where things live: types in `lib/types.ts`, the four example posters in `lib/data/seed.ts`, the adapter in `lib/adapter/`, the distance model in `lib/legibility.ts`, the OCR scan in `lib/ocr.ts`.
+Where things live: types in `lib/types.ts`, the four example posters in `lib/data/seed.ts`, their sample OCR numbers in `lib/data/ocr-samples.ts`, the adapter in `lib/adapter/`, the distance model in `lib/legibility.ts`, the OCR scan and 8-distance confirmation in `lib/ocr.ts`, its pure logic in `lib/confirm.ts`, constants in `lib/config.ts`.
+
+## Tests
+
+```bash
+npm test        # node:test through tsx: word matching, OCR distance rule, wording, zod schemas, sample table
+npm run proof   # runs the tests and the calibration, rewrites the PROOF blocks in this README, always exits 0
+```
+
+<!-- PROOF:BEGIN tests -->
+Tests: 12 passed, 0 failed (1 file, node:test through tsx, written by `npm run proof`).
+<!-- PROOF:END tests -->
 
 ## Built during IdeaLab Hacks
 
 Before the event: nothing but a generic Next.js starter template (layout, Tailwind setup, empty button/card/badge/input primitives).
 
-During the event: everything in this repository's commit history, starting with the scaffold commits. That covers the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the throwable poster rail, the adapter and API routes, every illustration and all copy.
+During the event: everything in this repository's commit history, starting with the scaffold commits. That covers the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the 8-distance OCR confirmation, the throwable poster rail, the adapter and API routes, the tests and proof script, every illustration and all copy.
 
 ## Planned
 
 Not built yet. None of these run today:
 
-- Re-read the blurred poster with OCR at 8 fixed distances (1 to 10 m) and mark the point where the word match drops, as a second signal next to the arcmin estimate.
 - PDF upload (first page through pdf.js).
 - A corridor view that shows the poster small on a wall in perspective.
 - A downloadable PNG report with every block's verdict and fix.
@@ -81,10 +129,12 @@ Not built yet. None of these run today:
 
 > Adjust this section to the hackathon's disclosure rules before submitting.
 
-We used AI coding assistants for scaffolding and boilerplate. Architecture, product decisions, and final code review are our own.
+We used an AI coding assistant (Claude Code) for scaffolding, boilerplate and parts of the OCR confirmation code. Architecture, product decisions, and final code review are our own.
+
+At runtime there is no language model and no hosted AI service. The only model that runs is Tesseract.js, an open-source OCR engine (LSTM based) that executes in your browser. zod is a plain validation library, not AI.
 
 ## Credits
 
-- Tesseract.js (Apache 2.0), react-spring (MIT), @use-gesture (MIT), lucide-react (ISC), Next.js (MIT), tsx (MIT)
+- Tesseract.js (Apache 2.0), zod (MIT), react-spring (MIT), @use-gesture (MIT), lucide-react (ISC), Next.js (MIT), tsx (MIT)
 - Machado, Oliveira and Fernandes (2009), "A Physiologically-based Model for Simulation of Color Vision Deficiency"
 - NC State "Legible Viewing Distance for Posters and Exhibits" table, used as the calibration anchor

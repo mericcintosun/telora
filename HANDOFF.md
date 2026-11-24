@@ -16,60 +16,77 @@ You are picking up a working Next.js 15 app. Read this file, then `IDENTITY.md`,
 - Submit through Devpost.
 - Clearly separate pre-existing work from event work (README "Built during IdeaLab Hacks").
 - Credit every library, component, dataset and AI tool (README "Credits" and "AI use").
-- Describe capabilities accurately. Never claim the 8-distance OCR re-read works until it does.
+- Describe capabilities accurately.
 - Explain the idea, the work, and what was learned (README "What we learned").
 
-**Phase 1 goal (this session):** every step of the 90-second demo has a home on `/` or `/about` (see `DEMO.md`), and data flows through one adapter seam.
+**Phase 2 goal (this session):** DEMO.md step 7, the 8-distance OCR confirmation, is real. An uploaded poster is blurred to each of 1, 1.5, 2, 3, 4, 5, 7 and 10 m and re-read by Tesseract.js in the browser; each line then reads "OCR: x m, model: y m".
 
 ## Status
 
-Phase 1 done by reading and editing files only. Nothing was compiled or run in this session. The build, `npm run seed` and the deploy are unverified until the runner reports back.
+Phase 2 was done by reading and editing files only. Nothing was compiled, tested or run in this session. `npm install`, `npm run build`, `npm test`, `npm run proof` and the browser upload are unverified until the runner and a human report back.
 
-Done:
-- Typed core in `lib/types.ts` (all domain types, `ScanProgress`, `ApiResponse<T>`, `AdapterMode`). `lib/ocr.ts` re-exports `ScanProgress`.
-- Seed in `lib/data/seed.ts` (same ids and values as before, fixed `updated` dates, no `Date.now` or `Math.random`). `lib/data.ts` is now a barrel.
-- Adapter seam `lib/adapter/{types,fake,real,index}.ts`; `getAdapter()` reads `ADAPTER_MODE`, default `"fake"`.
-- `app/api/posters/route.ts` and `app/api/profiles/route.ts` return `ApiResponse` from the adapter.
-- `app/page.tsx` and `app/about/page.tsx` read through `getAdapter()`. `PosterLab` and `PosterDeck` take posters and profiles as props.
-- `app/loading.tsx`, `app/about/loading.tsx`; empty states in `components/poster-deck.tsx` ("No posters yet. Upload one below."), `components/block-report.tsx` ("No text lines found for this poster.") and a no-poster panel in `components/poster-lab.tsx`. Upload idle state unchanged (`components/upload-scan.tsx`, `state.kind === "idle"`).
-- `app/error.tsx` (name, `reset()` retry, link to `/`, no message or stack) and `app/not-found.tsx` (name, link to `/`).
-- Metadata template `"%s | Telora"` in `app/layout.tsx`; `/` title "Poster distance lab", `/about` title "How it works". Header link uses `aria-current="page"` via `components/header-link.tsx`.
-- Type scale (`--text-*`), spacing base (`--spacing`) and a link focus outline added to `app/globals.css`. OG colors moved to `lib/og-colors.ts`.
-- `DEMO.md`, `CLAUDE.md`, README stack and "Planned" section, this file.
+**What went real:** the 8-distance in-browser OCR confirmation (`confirmAtDistances` in `lib/ocr.ts:304`, pure logic in `lib/confirm.ts`), with a 2-worker Tesseract scheduler, `ctx.filter` blur with a downscale fallback for Safari, timeouts with exactly one retry on worker load, typed error codes, and a content-hash cache for the tab.
 
-Unmet or partly met, with evidence:
-- Hex literals still exist under `app/`: `app/globals.css:7-17` (the token block, which is where the spec says they live) and `app/icon.svg:2-8` (protected file, not touched). `components/` has none.
-- The tokens sit in a `:root` block (`app/globals.css:6-39`) that `@theme inline` maps to utilities, not literally inside `@theme`. Moving them risked Tailwind dropping unreferenced theme variables; left as is.
-- `components/poster-deck.tsx` keeps a fixed card width in px (`CARD_W = 232`, used at the `role="listitem"` div). The throw and snap math (`STEP`) works in px, so a rem width would desync at non-default font sizes. The rail viewport itself is fluid.
-- `app/opengraph-image.tsx` keeps px sizes; it is a fixed 1200x630 image, not a responsive container.
-- The upload card remounts if the seed is empty and the visitor uploads (the no-poster branch in `components/poster-lab.tsx` switches to the full layout). Only reachable with an empty seed.
-- `useSearchParams`: Grep finds no call anywhere. `/` reads `searchParams` as a server page prop, so no `Suspense` wrapper is needed.
-- Not built yet: demo step 6 (corrected poster) and step 7 (8-distance OCR, PDF, corridor view, PNG report). Kit signatures 2 and 3.
+**Still on fixtures:** the seed posters and vision profiles (`lib/data/seed.ts`), and the seed posters' OCR numbers, which are hand-written samples (`lib/data/ocr-samples.ts`, labelled "Sample OCR", only under `ADAPTER_MODE=fake`).
+
+**Env keys:** none required. `.farm-live.json` is `{ "requiredEnv": [], "optionalEnv": [] }` because the real path is in-browser OCR and needs no secret.
+
+### Acceptance gate, checked by reading files
+
+- [x] Both adapters implement `PosterAdapter`: `lib/adapter/fake.ts:18` and `lib/adapter/real.ts:10`. The only `ADAPTER_MODE` reader is `lib/adapter/index.ts:12`, which defaults to fake.
+- [x] Grep for `adapter/fake|adapter/real` in code finds only the imports in `lib/adapter/index.ts:5-6`.
+- [x] `.farm-live.json` has empty `requiredEnv` and `optionalEnv`; justified in the Status paragraph above.
+- [x] `lib/config.ts` holds the core constants and reads no env (header comment, lines 1-3). `.env.example` lists only `ADAPTER_MODE` and the commented build-time `NEXT_PUBLIC_BRAND_FILES`; the code reads only those two (`lib/adapter/index.ts:12`, `lib/brand-files.ts:2`).
+- [x] `package.json:10-11` has `test` and `proof`, `package.json:25` has `zod`. `tests/confirm.test.ts` and `scripts/proof.ts` exist. README has three BEGIN/END pairs: `ocr` (lines 58-60), `calibration` (66-68), `tests` (102-104).
+- [x] The forbidden filler markers from the spec (the paste marker, the to-be-decided abbreviation and the two placeholder phrases) have zero Grep hits in README.md, HANDOFF.md and DEMO.md.
+- [x] `CoreErrorCode` union at `lib/errors.ts:6`. Failures throw `CoreFailure` carrying `{ error, hint }`; the UI stores only the code and renders `scanErrorHint(code)` (`components/upload-scan.tsx:68`, `:137`, `:167`).
+- [x] Worker load uses `OCR_LOAD_TIMEOUT_MS` and one retry guarded by `OCR_RETRIES` with no loop (`lib/ocr.ts:122-139`); each job uses `OCR_JOB_TIMEOUT_MS` (`lib/ocr.ts:160`).
+- [x] zod runs on the upload before any scan logic: `components/upload-scan.tsx:46`, and again as the first line of `scanPosterImage` (`lib/ocr.ts:418`). Schemas are exported from `lib/schemas.ts`; the tests import `BlockOcrSchema` and `UploadFileSchema`.
+- [x] No `NEXT_PUBLIC_` secret. No `"use client"` file imports a module that reads `process.env` (the client chain imports `lib/config`, `lib/errors`, `lib/schemas`, `lib/confirm`, `lib/cache`, `lib/ocr`, `lib/legibility`, `lib/data`; none touches `process.env`). The existing `lib/brand-files.ts` reads the build-time `NEXT_PUBLIC_BRAND_FILES`, unchanged from Phase 1.
+- [x] `lib/cache.ts:17` is a module-scope `Map`, keyed by SHA-256 hex plus size and profile id (`lib/cache.ts:24`); no filesystem or localStorage. No LLM and no prompt text. A failed confirmation returns the poster with model distances and `confirmError` (`lib/ocr.ts`, the `catch (err)` inside `scanPosterImage`).
+- [x] Core logs use `CORE_LOG_PREFIX` (`lib/ocr.ts:73-74`) and pass only counts, ids, codes and durations, for example `log("confirm ok", { blocks, ms })` at `lib/ocr.ts:370`.
+- [x] The UI says sample or live: `components/poster-lab.tsx:214` (driven by `mode` from `app/page.tsx:54`) and "Sample OCR" vs "OCR" from `block.ocr.basis` in `confirmationLine` (`lib/confirm.ts:96`).
+- [x] Under `ADAPTER_MODE=fake` seeds show sample OCR and uploads run the live check; the upload path does not depend on the mode, so no code path exists only under `real`.
+- [x] Imports in touched files resolve to repo files or declared dependencies (`zod`, `tesseract.js`, `node:*`). The seed is unchanged: 4 posters, 19 blocks (also asserted in `tests/confirm.test.ts`).
+- [x] Sameness greps: no dead hex in `app/`, `components/`, `lib/`; the only keyframe is `telora-fade` (`app/globals.css:150`); no banned keyframe, `--delay`, `backdrop-blur`, browser chrome or stat band added; header untouched (one brand mark).
+- [x] No em dash, en dash or banned word in written text (Grep: the only banned-word hit is the rule list in `CLAUDE.md:46`).
+
+Runner and human checks (not done by the agent): `npm install` picking up zod, `npm run build` with zero TypeScript errors, `npm test`, `npm run proof`, the browser upload, Vercel redeploy.
+
+### Manual checklist for the human
+
+- [ ] Confirm student eligibility (students only, above the age of majority, teams of 1 to 5).
+- [ ] Check the Devpost video length limit on the IdeaLab Hacks rules page.
+- [ ] On the live URL, upload one PNG poster and watch the bar step through "Re-reading at N m (k of 8)"; each line should then show "OCR: x m, model: y m". Upload the same file again: identical output, plus the "came from the tab's cache" note.
+- [ ] On the default fake mode, open Robot Sumo Night: the date reads "Sample OCR: 2.0 m, model: 2.4 m" and the report shows the "Sample data" line.
+- [ ] Open the browser console during an upload: lines start with `[core]` and never contain poster text.
 
 ## Decisions
 
-- `lib/data.ts` stays as a barrel (`export * from "./types"` plus seed exports and `findPoster`/`findProfile`, which now take an optional list). `@/lib/data` resolves to the file before the `lib/data/` folder.
-- Components still import `PAPER_SIZES` and `TONE_VAR` from the barrel. They are fixed constants (paper sizes, tone to CSS variable), not records an adapter would serve. No component imports `POSTERS` or `VISION_PROFILES`.
-- `PosterAdapter` has a `mode` field so the API envelope can report `"fake"` or `"real"`.
-- `realAdapter` reads the seed too. There is no backend; scanning stays in the browser. It is the Phase 2 swap point.
-- The old HANDOFF said "No server routes are needed". Phase 1 asked for two read-only API stubs, so they exist. They are not new pages; the page routes are still only `/` and `/about`.
-- `.env.example`: the first comment line changed from "needs no environment variables" to "needs no secrets", because `ADAPTER_MODE` now exists. `NEXT_PUBLIC_BRAND_FILES` got a commented placeholder line.
-- `scripts/seed.ts` uses relative imports so `tsx` needs no path alias setup. It creates `fixtures/` with `mkdirSync({ recursive: true })`; no snapshot was hand-written.
-- `PosterDeck` gets the 20/20 profile as a prop for its "N blocks lost at the spot" line instead of reading the seed.
-- Verdict chip font size moved from `text-[11px]` to a `text-2xs` token.
-- The `/about` metadata title became "How it works" (it renders as "How it works | Telora").
+- **`profileId` added to `BlockOcr`.** The spec listed four fields. The blur depends on the vision profile, and the cache key includes it, so a result without its profile could be compared against the wrong model. The report shows a "checked for a different vision profile" note when it differs, like the stale-size note.
+- **Scan uses the lab's current size and profile.** `UploadScan` now gets `size` and `profile` from `PosterLab`; the uploaded poster's `intendedSize` is that size, so the first report matches the OCR.
+- **One scheduler for both passes.** `scanPosterImage` starts the 2-worker scheduler once, runs the first pass and passes it to `confirmAtDistances` through an optional sixth `deps` argument; `confirmAtDistances` starts and terminates its own when called alone. Termination is always in `finally`.
+- **Worker load tolerates one failed worker.** Both workers load in parallel with `Promise.allSettled`; the scan continues with one if the other fails after its retry. A worker that arrives after its timeout is terminated.
+- **Blurred copies go to Tesseract as PNG Blobs** drawn on one reused surface, so 8 full-size canvases never sit in memory together. Jobs are queued as each blob is ready, so OCR starts while later copies are still encoding.
+- **Progress for parallel jobs** reports completed count k and names the next distance in queue order ("Re-reading at 3 m (4 of 8)"); the bar fills from 0.55 to 0.98.
+- **`scanErrorHint` lives in `lib/errors.ts`** (pure, testable) and is re-exported from `lib/ocr.ts`.
+- **Agreement colour:** `ocrAgrees` in `lib/confirm.ts` is OK when OCR reaches `OCR_AGREE_RATIO` (0.85) of the model, or when both are under 1 m; WARN otherwise. BAD is not used for OCR lines.
+- **Sample ratios** in `lib/data/ocr-samples.ts` are generated by a small helper from the hand-written distances, and a test checks that each one gives back its own distance under the 60% rule.
+- **`CAP_OF_LINE_BOX` and the deuteranopia matrix moved to `lib/config.ts`**, so `lib/ocr.ts` holds no tuning numbers.
+- **`/about`** "What runs where" card now describes the confirmation instead of calling it "next up".
+- The canvas is filled white before drawing, so transparent PNGs read as dark on white for Tesseract.
 
 ## Failed attempts
 
-None in this session.
+None in this session. No cut from the cut protocol was needed; the scheduler path was written as specified (not verified by running).
 
 ## Files changed
 
-Slice 1: `lib/types.ts` (new), `lib/data/seed.ts` (new), `lib/data.ts`, `lib/ocr.ts`, `lib/adapter/types.ts` (new), `lib/adapter/fake.ts` (new), `lib/adapter/real.ts` (new), `lib/adapter/index.ts` (new), `scripts/seed.ts` (new), `package.json`, `.env.example`.
-Slice 2: `app/api/posters/route.ts` (new), `app/api/profiles/route.ts` (new), `app/page.tsx`, `app/about/page.tsx`, `components/poster-lab.tsx`, `components/poster-deck.tsx`.
-Slice 3: `app/loading.tsx` (new), `app/about/loading.tsx` (new), `components/block-report.tsx`, `app/error.tsx`, `app/not-found.tsx`.
-Slice 4: `app/layout.tsx`, `app/globals.css`, `app/opengraph-image.tsx`, `lib/og-colors.ts` (new), `components/header-link.tsx` (new), `components/site-header.tsx`, `components/simulated-poster.tsx`.
-Slice 5: `DEMO.md` (new), `CLAUDE.md` (new), `README.md`, `HANDOFF.md`, `.farm-commits.json` (new).
+Slice 1: `lib/config.ts` (new), `lib/errors.ts` (new), `lib/schemas.ts` (new), `lib/confirm.ts` (new), `lib/types.ts`, `tests/confirm.test.ts` (new), `package.json`.
+Slice 2: `lib/ocr.ts`, `lib/cache.ts` (new).
+Slice 3: `lib/data/ocr-samples.ts` (new), `lib/adapter/fake.ts`, `lib/adapter/real.ts`, `lib/adapter/index.ts`, `app/page.tsx`.
+Slice 4: `components/upload-scan.tsx`, `components/block-report.tsx`, `components/poster-lab.tsx`, `app/about/page.tsx`.
+Slice 5: `scripts/proof.ts` (new), `.farm-live.json` (new), `.env.example`, `README.md`, `DEMO.md`, `CLAUDE.md`, `HANDOFF.md`, `.farm-commits.json`.
 
 ## Commands run
 
@@ -81,65 +98,50 @@ None, the agent cannot run commands.
 | --- | --- |
 | `app/layout.tsx` | Fonts, metadata with the `"%s | Telora"` template, `SiteHeader`, one `<main>` |
 | `app/globals.css` | Color tokens (IDENTITY.md hexes only), spacing, type scale, radii, aurora mesh, `telora-fade` and reduced-motion block, slider styling, link focus outline |
-| `app/page.tsx` | `/`: claim band + `PosterLab` fed by `getAdapter()` + two copy sections. Reads `?poster= &size= &d= &profile=` |
-| `app/loading.tsx` | Lab skeleton |
-| `app/about/page.tsx` | `/about`: the model in four steps, calibration table, what runs where. Reads through `getAdapter()` |
-| `app/about/loading.tsx` | About skeleton |
-| `app/error.tsx`, `app/not-found.tsx` | Error boundary with retry; 404. Both link to `/` |
+| `app/page.tsx` | `/`: claim band + `PosterLab` fed by `getAdapter()` (posters, profiles, `mode`) + two copy sections |
+| `app/about/page.tsx` | `/about`: the model, calibration table, what runs where |
 | `app/api/posters/route.ts`, `app/api/profiles/route.ts` | Read-only JSON, `ApiResponse<T>` from the adapter |
-| `app/opengraph-image.tsx` | 1200x630 OG image, colors from `lib/og-colors.ts` |
-| `app/icon.svg`, `public/logo.svg` | Brand glyph (do not touch) |
-| `public/illustrations/scene-1..3.svg` | Fallback illustrations for `SceneSlot` (do not touch) |
-| `components/site-header.tsx` | Sticky solid header: mark, one link, one action |
-| `components/header-link.tsx` | The header's `/about` link with `aria-current` |
-| `components/share-view-button.tsx` | Copies the current URL |
-| `components/poster-lab.tsx` | The tool: state, URL sync, controls, layout. Posters and profiles via props |
-| `components/poster-deck.tsx` | K4 signature 1: throwable rail; empty state |
-| `components/simulated-poster.tsx` | Blurred live poster + verdict outlines; deutan SVG filter |
-| `components/block-report.tsx` | Per-block max distance, verdict, fix recipe; empty state |
-| `components/upload-scan.tsx` | Upload card: idle, scanning, done, error |
-| `components/ui/*` | shadcn primitives restyled for D19 |
-| `lib/types.ts` | All shared types and `ApiResponse<T>` |
+| `components/poster-lab.tsx` | The tool: state, URL sync, controls, layout, the sample/live source line |
+| `components/block-report.tsx` | Per-block max distance, verdict, fix recipe, OCR confirmation line |
+| `components/upload-scan.tsx` | Upload card: zod check, 8-step progress, done with OCR count, error by code |
+| `lib/config.ts` | Every core constant; reads no env |
+| `lib/errors.ts` | `CoreErrorCode`, `CoreError`, `coreError`, `CoreFailure`, `scanErrorHint` |
+| `lib/schemas.ts` | `UploadFileSchema`, `BlockOcrSchema`, `OcrSamplesSchema` |
+| `lib/confirm.ts` | Pure: `normalizeWords`, `wordMatchRatio`, `assignWordsToBlocks`, `ocrMaxDistanceM`, `ocrAgrees`, `confirmationLine` |
+| `lib/ocr.ts` | `scanPosterImage()` and `confirmAtDistances()`: Tesseract scheduler, blur, timeouts, logs |
+| `lib/cache.ts` | In-memory scan cache keyed by SHA-256 + size + profile |
 | `lib/data/seed.ts` | 4 posters (19 blocks), 4 vision profiles, paper sizes, tone map |
-| `lib/data.ts` | Barrel: types, seed exports, `findPoster`, `findProfile` |
-| `lib/adapter/*` | `PosterAdapter`, fake and real adapters, `getAdapter()` |
-| `lib/legibility.ts` | The distance model |
-| `lib/ocr.ts` | `scanPosterImage()`: Tesseract.js scan + canvas contrast |
-| `lib/og-colors.ts` | OG image colors mirroring `app/globals.css` |
+| `lib/data/ocr-samples.ts` | Sample OCR numbers for the 19 seed blocks (not measured) |
+| `lib/adapter/*` | `PosterAdapter`, fake (seed + sample OCR) and real (seed, no OCR), `getAdapter()` |
+| `lib/legibility.ts` | The distance model, `SCAN_DISTANCES_M`, `blurSigmaPx` |
+| `tests/confirm.test.ts` | `npm test` |
+| `scripts/proof.ts` | `npm run proof`: tests, calibration, README PROOF blocks |
 | `scripts/seed.ts` | `npm run seed`: writes `fixtures/seed-snapshot.json` |
 
 ### Real vs mocked
 
-- **Real:** distance model, blur preview, deuteranopia matrix, low-contrast filter, verdicts, fix recipes, URL state, Tesseract.js upload scan, contrast measured from pixels.
-- **Seeded:** posters and profiles (both adapters serve `lib/data/seed.ts`). The `contrast` and `deutanContrast` values on the 19 seed blocks are hand-computed from the palette.
-- **Not built yet:** 8-distance OCR re-read (`SCAN_DISTANCES_M` in `lib/legibility.ts` is ready), PDF upload, corridor view, PNG report, corrected seed variant, kit signatures 2 (spring gauge) and 3 (pointer tilt).
-
-### One-mark proof (`components/site-header.tsx`)
-
-```tsx
-<Link href="/" className="flex items-center gap-2.5 rounded-xl font-display text-xl font-black tracking-tight">
-  <BrandMark size={30} />
-  Telora
-</Link>
-```
+- **Real:** distance model, blur preview, deuteranopia matrix, verdicts, fix recipes, URL state, Tesseract.js upload scan, contrast from pixels, 8-distance OCR confirmation on uploads.
+- **Seeded:** posters and profiles. Seed OCR numbers are samples under fake mode, absent under real mode.
+- **Not built yet:** PDF upload, corridor view, PNG report, corrected seed variant, kit signatures 2 (spring gauge) and 3 (pointer tilt).
 
 ## Open questions
 
-- Confirm student eligibility (students only, above the age of majority, teams of 1 to 5) before submitting.
-- The Devpost video length limit and the public repo requirement are unverified. Check the IdeaLab Hacks rules page before recording.
-- Should `ADAPTER_MODE=real` ever point at something other than the seed? If not, Phase 2 can keep `realAdapter` as a seed reader and put OCR confirmation in `lib/ocr.ts` only.
+- Unverified until run: whether `tesseract.js` 6 loads through `await import()` as a namespace or under `.default` in the Next bundle. `loadTesseract` in `lib/ocr.ts` accepts both.
+- Unverified: real-world agreement between OCR and model distances. If Tesseract fails at 1 m on most posters (blur sigma there is about 1.3 px at 1600 px), consider re-reading at a larger long edge; the constant is `OCR_LONG_EDGE_PX`.
+- The downscale blur fallback (`OCR_DOWNSCALE_PER_SIGMA = 2`) is an approximation; nobody has compared it with the filter blur on the same file yet.
+- Confirm student eligibility and the Devpost video limit (see the manual checklist).
 
 ## Next best step
 
-Phase 2: the 8-distance OCR confirmation in `lib/ocr.ts`. Add `confirmAtDistances(canvas, blocks, size, profile)`: for each of `SCAN_DISTANCES_M`, blur an OffscreenCanvas copy with `ctx.filter = blur(sigma)` (sigma from `blurSigmaPx`), re-run Tesseract (two workers in parallel), and record the last distance where at least 60% of each line's words still match as `ocrMaxDistanceM`. Done looks like: after an upload the report shows "OCR: 2.0 m, model: 2.4 m" per line and the progress bar fills through 8 steps.
+Phase 3: PDF upload via `pdfjs-dist`. Render the first page to a canvas at the `OCR_LONG_EDGE_PX` long edge, then hand that canvas to the same path as images (`scanPosterImage` will need a canvas entry point next to the `File` one). Extend `UploadFileSchema` with `application/pdf`.
 
-Later missions (unchanged from the scaffold plan): PDF upload with `pdfjs-dist`; wow-moment polish and corridor view; spring gauge on the lost count; PNG report and a "corrected" Robot Sumo Night seed variant (date at 1.7x); pointer tilt, mobile layout, video.
+Later missions: wow-moment polish and corridor view; spring gauge on the lost count; PNG report and a "corrected" Robot Sumo Night seed variant (date at 1.7x); pointer tilt, mobile layout, video.
 
 ## Constraints
 
 - Stack: Next.js 15 App Router, TypeScript strict, Tailwind v4 (no config file), shadcn primitives in `components/ui/`, Vercel.
 - `IDENTITY.md` is law for color, font, route, layout and animation. Colors only from tokens in `app/globals.css`. Radius 0.75rem minimum. Motion opacity only, linear, 280 ms, keyframes prefixed `telora-`. Header: one link, one action.
-- Kit packages only in `"use client"` components. Every drag has a button alternative and `touch-action`.
+- Kit packages and Tesseract.js only in `"use client"` components or browser-only functions.
 - Copy rules and banned words: see `CLAUDE.md`.
-- Honesty: the README and UI never describe a feature that does not run.
+- Honesty: the README and UI never describe a feature that does not run; sample numbers are always labelled.
 - If scope threatens the deadline, cut the corridor view first, then the PNG report, never the working core.

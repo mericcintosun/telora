@@ -8,7 +8,8 @@ Read `IDENTITY.md` before any visual change. It overrides taste. Then `HANDOFF.m
 - `npm run build` (must stay green after every change; it also type-checks `scripts/`)
 - `npm run seed` (writes `fixtures/seed-snapshot.json` from `lib/data/seed.ts`, same bytes every run)
 - `npm run dev` (http://localhost:3000)
-- There is no test runner yet.
+- `npm test` (node:test through tsx, `tests/*.test.ts`: pure OCR confirmation logic, schemas, sample table)
+- `npm run proof` (runs the tests and the calibration, rewrites the `PROOF:BEGIN/END` blocks in README.md, always exits 0)
 
 ## Stack pitfalls
 
@@ -16,7 +17,8 @@ Read `IDENTITY.md` before any visual change. It overrides taste. Then `HANDOFF.m
 - Tailwind v4 with no config file. Tokens live in `app/globals.css` (`:root` hexes mapped by `@theme inline`). No hex anywhere else in `app/` or `components/`; the OG image reads `lib/og-colors.ts`.
 - TypeScript strict.
 - Tesseract.js and the kit packages (`@react-spring/web`, `@use-gesture/react`) are imported only in `"use client"` components.
-- No server key anywhere. The only env keys are `ADAPTER_MODE` and the build-time `NEXT_PUBLIC_BRAND_FILES`.
+- No server key anywhere. The only env keys are `ADAPTER_MODE` (read only in `lib/adapter/index.ts`; `fake` gives seed posters sample OCR numbers, `real` gives none) and the build-time `NEXT_PUBLIC_BRAND_FILES`. The real OCR runs in the browser and needs no key.
+- Core constants live in `lib/config.ts` (reads no env). Error codes in `lib/errors.ts`; the UI switches on the code. Pure confirmation logic in `lib/confirm.ts` keeps relative imports so `tsx` runs it without the path alias.
 - Data flows through one seam: `getAdapter()` in `lib/adapter`. Pages pass posters and profiles to client components as props; components never import the seed.
 
 ## Never touch
