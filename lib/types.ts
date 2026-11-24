@@ -30,6 +30,24 @@ export interface PosterBlock {
   contrast: number;
   /** Same pair after the Machado 2009 deuteranopia transform. */
   deutanContrast: number;
+  /** OCR confirmation at the 8 scan distances. Absent when no OCR result exists. */
+  ocr?: BlockOcr;
+}
+
+/**
+ * Result of re-reading one block with OCR at the 8 distances in SCAN_DISTANCES_M.
+ * "live" comes from Tesseract.js in this browser; "sample" is a hand-written example value.
+ */
+export interface BlockOcr {
+  /** Largest scan distance up to which every distance still passed. 0 means lost already at 1 m. */
+  maxDistanceM: number;
+  /** Share of the line's words matched at each scan distance, same order as SCAN_DISTANCES_M. */
+  matchByDistance: number[];
+  /** Paper size the blur was computed for. */
+  size: PaperSize;
+  /** Vision profile the blur was computed for. */
+  profileId: VisionProfile["id"];
+  basis: "live" | "sample";
 }
 
 export interface PosterRecord {
