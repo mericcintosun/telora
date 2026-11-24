@@ -32,7 +32,7 @@ There is no sponsor SDK in this hackathon. The technical core is:
 - **CSS filters** apply the distance blur, a contrast cut for the low-contrast profile, and an SVG `feColorMatrix` with the same Machado matrix for the deuteranopia preview.
 - **react-spring and @use-gesture** drive the poster rail: throw it and the release velocity decides which example loads.
 
-Everything runs in the browser. No key, no server, no upload.
+The scan and the model run in the browser. No key, and your poster is never uploaded. The example posters and vision profiles come from a seed module through one adapter (`lib/adapter`), which the pages and two read-only JSON routes (`/api/posters`, `/api/profiles`) share.
 
 ## What we learned
 
@@ -42,11 +42,12 @@ Everything runs in the browser. No key, no server, no upload.
 
 ## Tech stack
 
-- Next.js 15 (App Router), TypeScript strict, Tailwind CSS v4, shadcn-style primitives
+- Next.js 15 (App Router), React 19, TypeScript strict, Tailwind CSS v4, shadcn-style primitives
 - Tesseract.js 6 (in-browser OCR)
-- @react-spring/web and @use-gesture/react
+- @react-spring/web 10 and @use-gesture/react 10
 - Red Hat Display and Red Hat Text via next/font
-- Deployed on Vercel as a static-friendly app
+- tsx (dev only, runs `npm run seed`)
+- Deployed on Vercel with the standard Next build
 
 ## Quickstart
 
@@ -56,20 +57,25 @@ npm run dev
 # open http://localhost:3000
 ```
 
-No environment variables are needed (see `.env.example`). The four example posters live in `lib/data.ts`, the distance model in `lib/legibility.ts`, the OCR scan in `lib/ocr.ts`.
+No secrets are needed. `.env.example` lists one optional key, `ADAPTER_MODE` (`fake` by default). `npm run seed` writes the seed to `fixtures/seed-snapshot.json`.
+
+Where things live: types in `lib/types.ts`, the four example posters in `lib/data/seed.ts`, the adapter in `lib/adapter/`, the distance model in `lib/legibility.ts`, the OCR scan in `lib/ocr.ts`.
 
 ## Built during IdeaLab Hacks
 
 Before the event: nothing but a generic Next.js starter template (layout, Tailwind setup, empty button/card/badge/input primitives).
 
-During the event: the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the throwable poster rail, every illustration and all copy.
+During the event: everything in this repository's commit history, starting with the scaffold commits. That covers the distance model, the four seed posters, the live simulated preview, vision profiles, the per-block report and fix recipe, the Tesseract.js upload scan, the throwable poster rail, the adapter and API routes, every illustration and all copy.
 
-## What we would build next
+## Planned
+
+Not built yet. None of these run today:
 
 - Re-read the blurred poster with OCR at 8 fixed distances (1 to 10 m) and mark the point where the word match drops, as a second signal next to the arcmin estimate.
 - PDF upload (first page through pdf.js).
 - A corridor view that shows the poster small on a wall in perspective.
 - A downloadable PNG report with every block's verdict and fix.
+- A corrected version of the club poster that reads all green at 4 m.
 
 ## AI use
 
@@ -79,6 +85,6 @@ We used AI coding assistants for scaffolding and boilerplate. Architecture, prod
 
 ## Credits
 
-- Tesseract.js (Apache 2.0), react-spring (MIT), @use-gesture (MIT), lucide-react (ISC), Next.js (MIT)
+- Tesseract.js (Apache 2.0), react-spring (MIT), @use-gesture (MIT), lucide-react (ISC), Next.js (MIT), tsx (MIT)
 - Machado, Oliveira and Fernandes (2009), "A Physiologically-based Model for Simulation of Color Vision Deficiency"
 - NC State "Legible Viewing Distance for Posters and Exhibits" table, used as the calibration anchor
