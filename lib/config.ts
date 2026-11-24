@@ -36,5 +36,13 @@ export const UPLOAD_TYPES = ["image/png", "image/jpeg", "image/webp", "applicati
 /** A PDF worker that fails to load gets exactly this many retries before upstream_error. */
 export const PDF_WORKER_RETRIES = 1;
 
+/**
+ * Where the OCR engine's files come from. lib/ocr.ts calls Tesseract.js createWorker("eng") with no
+ * workerPath, corePath or langPath, so Tesseract.js 6 fetches its worker script, WebAssembly core and
+ * English language data from its default CDN, jsDelivr. Only those files are downloaded; the poster
+ * itself never leaves the browser. The pdf.js worker is bundled by Next and served from this site.
+ */
+export const OCR_ASSET_HOST = "cdn.jsdelivr.net";
+
 /** Prefix for every core-path log line. Logs carry ids, counts and durations only, never poster text. */
 export const CORE_LOG_PREFIX = "[core]";
