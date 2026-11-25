@@ -46,7 +46,7 @@ Next.js, React, TypeScript, Tailwind CSS, Tesseract.js, pdf.js, zod, react-sprin
 
 ## Try it out
 
-https://telora.vercel.app
+https://telora-umber.vercel.app
 
 ## Repository
 

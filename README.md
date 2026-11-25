@@ -2,13 +2,13 @@
 
 Upload your poster and say where it will hang: Telora shows which line of text stops reading from across the hallway, and at exactly how many metres it disappears. Posters get designed 40 cm from a laptop and read from 3 to 5 metres down a corridor, so the date and the room vanish first and nobody finds out until the print is paid for.
 
-**Live:** https://telora.vercel.app (open it and drag the "Viewing distance" slider: that is DEMO step 3).
+**Live:** https://telora-umber.vercel.app (open it and drag the "Viewing distance" slider: that is DEMO step 3).
 
 The live URL runs the real in-browser OCR on posters you upload; the seeded example posters show hand-written sample OCR numbers, labelled "Sample OCR" in the report.
 
 ## Try it in 60 seconds
 
-1. Open https://telora.vercel.app. Robot Sumo Night is already loaded on A2 at 4 m.
+1. Open https://telora-umber.vercel.app. Robot Sumo Night is already loaded on A2 at 4 m.
 2. Drag "Viewing distance" from 1 m to 6 m. The poster blurs, the gauge swings to "N of 5 lines readable", and the event date chip reads "Event date: 2.4 m max".
 3. Switch "Who is looking" to 20/40, then to Deuteranopia.
 4. In "Block by block", click "Open the corrected poster": every line is green at 4 m.
@@ -130,7 +130,7 @@ Tests: 16 passed, 0 failed (2 files, node:test through tsx, written by `npm run 
 
 | What | Address |
 | --- | --- |
-| Live URL | https://telora.vercel.app |
+| Live URL | https://telora-umber.vercel.app |
 
 Plain web app: no contracts, no chain, no wallet. See `SECURITY.md`.
 
